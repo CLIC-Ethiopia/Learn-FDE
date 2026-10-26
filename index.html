@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Title & SEO Meta -->
+    <title>FDE Mastery: Offline Forward Deployed Engineering Academy</title>
+    <meta name="description" content="A high-performance, offline-first progressive web application for mastering Forward Deployed Engineering, featuring dynamic skill modules, interview preparation tools, job hunting pipelines, and a fast-learning accelerator." />
+    <meta property="og:title" content="FDE Mastery: Offline Forward Deployed Engineering Academy" />
+    <meta property="og:description" content="A high-performance, offline-first progressive web application for mastering Forward Deployed Engineering." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA & Mobile Web Capabilities -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#080b11" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FDEMastery" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Application Stylesheet -->
+    <link rel="stylesheet" href="/main.css" />
+  </head>
+  <body>
+    <!-- Offline Alert Banner (shown when browser is disconnected) -->
+    <div id="offline-banner" class="offline-banner" style="display: none;">
+      <span>⚡ Offline Mode Active</span> — Local database and cached curriculum running with zero internet required.
+    </div>
+
+    <div class="app-container">
+      <!-- Top Sticky Navigation Bar -->
+      <header class="app-header">
+        <div class="header-content">
+          <!-- Logo & Brand -->
+          <div class="brand-wrapper" id="brand-home-btn" title="FDE Mastery Academy Home">
+            <div class="brand-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 17 10 11 4 5"></polyline>
+                <line x1="12" y1="19" x2="20" y2="19"></line>
+              </svg>
+            </div>
+            <div>
+              <div class="brand-title">
+                <span>FDE</span><span style="color: var(--accent-cyan)">.Mastery</span>
+                <span class="brand-badge">Air-Gap Ready</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Switcher Tabs -->
+          <nav class="nav-tabs" role="tablist">
+            <button class="nav-tab-btn active" data-tab="skills" role="tab" aria-selected="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <span>1. Learning Skills</span>
+              <span class="nav-shortcut">1</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="interviews" role="tab" aria-selected="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>2. Interview Prep</span>
+              <span class="nav-shortcut">2</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="jobhunting" role="tab" aria-selected="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <span>3. Job Hunting</span>
+              <span class="nav-shortcut">3</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="accelerator" role="tab" aria-selected="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>4. Accelerator</span>
+              <span class="nav-shortcut">4</span>
+            </button>
+          </nav>
+
+          <!-- Header Right Utilities -->
+          <div class="header-actions">
+            <!-- Search Input -->
+            <div class="search-wrapper">
+              <svg class="search-icon-left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="global-search" class="search-input" placeholder="Search FDE skills & notes..." />
+              <span class="search-shortcut-right">/</span>
+            </div>
+
+            <!-- Ingestion / Data Action Menu -->
+            <button id="open-ingest-modal-btn" class="btn btn-secondary btn-sm" title="Ingest static JSON/Markdown catalog or export backup">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Data Sync</span>
+            </button>
+
+            <!-- PWA In-App Install Button (auto-wired) -->
+            <button id="pwa-install-btn" class="btn btn-primary btn-sm" style="display: none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Install App</span>
+            </button>
+
+            <!-- Offline / Online Connection Pill -->
+            <div id="connection-pill" class="status-pill" title="Network status">
+              <span class="status-beacon"></span>
+              <span id="connection-text">Online</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Dynamic App Shell -->
+      <main class="main-wrapper">
+
+        <!-- ====================================================================
+             SECTION 1: LEARNING FDE SKILLS
+             ==================================================================== -->
+        <section id="section-skills" class="view-section active">
+          <!-- Section Hero Banner -->
+          <div class="section-banner">
+            <span class="section-tag">Curriculum Matrix // Section 1</span>
+            <h1 class="section-title">Forward Deployed Engineering Core Skills</h1>
+            <p class="section-description">
+              Forward Deployed Engineers bridge the gap between high-level platform engineering and messy customer infrastructure. Master enterprise APIs, air-gapped container topologies, applied GenAI/RAG, and field solution scoping.
+            </p>
+          </div>
+
+          <!-- Track Filter Bar -->
+          <div class="filter-bar" id="track-filter-container">
+            <button class="filter-chip active" data-track="all">All Tracks (<span id="total-modules-count">8</span>)</button>
+            <button class="filter-chip" data-track="core-tech-stack">Core Tech Stack (APIs, DBs, Docker)</button>
+            <button class="filter-chip" data-track="ai-ml-fundamentals">AI/ML Fundamentals (RAG, Local LLMs, Agents)</button>
+            <button class="filter-chip" data-track="solution-architecture">Solution Architecture (Field Scoping & SOW)</button>
+          </div>
+
+          <!-- Bento Grid of Dynamic Learning Modules -->
+          <div class="bento-grid" id="modules-bento-grid">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </section>
+
+        <!-- ====================================================================
+             SECTION 2: PREPARING FOR INTERVIEWS
+             ==================================================================== -->
+        <section id="section-interviews" class="view-section" style="display: none;">
+          <div class="section-banner">
+            <span class="section-tag">Battle-Tested Drills // Section 2</span>
+            <h1 class="section-title">FDE Interview Simulator & Retention Engine</h1>
+            <p class="section-description">
+              Practice specialized Forward Deployed Engineering interviews: 3D spaced-repetition flashcards, interactive logic routing puzzles, live browser coding challenges, and multi-stage client architecture scenarios.
+            </p>
+          </div>
+
+          <!-- Sub-Tool Navigation Tabs -->
+          <div class="subnav-tabs" role="tablist">
+            <button class="subnav-tab active" data-interview-tool="flashcards">1. Flashcard Engine</button>
+            <button class="subnav-tab" data-interview-tool="puzzles">2. Interactive Logic Puzzles</button>
+            <button class="subnav-tool subnav-tab" data-interview-tool="coding">3. Algorithmic Coding Challenges</button>
+            <button class="subnav-tab" data-interview-tool="scenarios">4. Systems Architecture Scenarios</button>
+          </div>
+
+          <!-- Tool 2A: 3D Flashcard Engine -->
+          <div id="tool-flashcards" class="interview-tool-view">
+            <div class="bento-grid">
+              <!-- Flashcard Deck Controls & Stats -->
+              <div class="bento-col-4">
+                <div class="bento-card bento-card-highlight">
+                  <div class="card-title">Flashcard Decks</div>
+                  <div class="card-subtitle">Select domain to drill key concepts</div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;" id="deck-selector-container">
+                    <!-- Populated dynamically -->
+                  </div>
+
+                  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.4rem;">
+                      <span style="color: var(--text-muted)">Deck Retention</span>
+                      <span id="deck-mastery-percent" style="color: var(--accent-cyan); font-weight: 700;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: var(--bg-tertiary); border-radius: 9999px; overflow: hidden;">
+                      <div id="deck-mastery-bar" style="width: 0%; height: 100%; background: var(--accent-cyan); transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 1.25rem; display: flex; gap: 0.5rem;">
+                    <button id="shuffle-flashcards-btn" class="btn btn-secondary btn-sm" style="flex: 1;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                      Shuffle Deck
+                    </button>
+                    <button id="reset-flashcards-btn" class="btn btn-ghost btn-sm" title="Reset deck memory">Reset</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3D Interactive Card Stage -->
+              <div class="bento-col-8">
+                <div class="flashcard-stage">
+                  <div class="flashcard-3d" id="active-flashcard" title="Click card or press Space to flip">
+                    <!-- Front Face -->
+                    <div class="flashcard-face flashcard-front">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span id="fc-deck-label" class="tag-badge" style="color: var(--accent-cyan)">Deck: System Design</span>
+                        <span id="fc-counter" style="font-size: 0.8rem; color: var(--text-subtle)">Card 1 of 8</span>
+                      </div>
+                      <div id="fc-question" class="flashcard-q">Click anywhere to flip and reveal answer...</div>
+                      <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-subtle);">
+                        <span>💡 Tip: Click card to flip</span>
+                        <span>Press [Space] to flip</span>
+                      </div>
+                    </div>
+
+                    <!-- Back Face -->
+                    <div class="flashcard-face flashcard-back">
+                      <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                          <span class="tag-badge" style="color: var(--accent-emerald)">Architecture Answer</span>
+                          <span class="tag-badge">Press 1-4 for Spaced Repetition</span>
+                        </div>
+                        <div id="fc-answer" class="flashcard-a">...</div>
+                        <div id="fc-protip" class="flashcard-protip">Pro Tip: ...</div>
+                      </div>
+
+                      <div style="font-size: 0.75rem; color: var(--text-subtle); text-align: center;">
+                        Rate your recall to schedule spaced repetition
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Spaced Repetition Rating Buttons -->
+                  <div class="flashcard-controls">
+                    <button class="btn btn-secondary btn-sm" id="fc-rate-again" style="border-color: rgba(244,63,94,0.4); color: #fda4af;">
+                      <span>1. Again (1m)</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="fc-rate-hard" style="border-color: rgba(245,158,11,0.4); color: #fcd34d;">
+                      <span>2. Hard (10m)</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="fc-rate-good" style="border-color: rgba(6,182,212,0.4); color: #67e8f9;">
+                      <span>3. Good (1d)</span>
+                    </button>
+                    <button class="btn btn-emerald btn-sm" id="fc-rate-easy">
+                      <span>4. Easy (4d)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 2B: Interactive Logic Puzzles -->
+          <div id="tool-puzzles" class="interview-tool-view" style="display: none;">
+            <div class="bento-grid">
+              <div class="bento-col-12">
+                <div class="bento-card bento-card-highlight">
+                  <div class="card-header-flex">
+                    <div>
+                      <div class="card-title">Puzzle 1: Air-Gapped Network Topology Routing</div>
+                      <div class="card-subtitle">Connect safe nodes in order to fulfill client data retrieval without leaking traffic to the internet gateway.</div>
+                    </div>
+                    <button id="reset-puzzle-btn" class="btn btn-secondary btn-sm">Clear Path</button>
+                  </div>
+
+                  <!-- Visual Node Graph Selection -->
+                  <div class="puzzle-board">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                      Click the nodes in correct sequence (Source → Reverse Proxy → Auth → Target Storage):
+                    </div>
+
+                    <div class="node-grid" id="puzzle-nodes-container">
+                      <!-- Rendered by app.js -->
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                      <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 0.4rem;">
+                        Current Hop Path:
+                      </div>
+                      <div id="puzzle-path-preview" class="path-preview">
+                        Click nodes above to construct execution pipeline...
+                      </div>
+                    </div>
+
+                    <div id="puzzle-feedback" style="margin-top: 1rem; font-size: 0.88rem; display: none;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Puzzle 2: Token Bucket Rate Limiter Interactive Simulator -->
+              <div class="bento-col-12" style="margin-top: 1rem;">
+                <div class="bento-card">
+                  <div class="card-header-flex">
+                    <div>
+                      <div class="card-title">Puzzle 2: Ingest Token Bucket Rate Limiter Tuning</div>
+                      <div class="card-subtitle">Simulate incoming traffic spikes against downstream database load. Keep DB CPU under 80% without dropping client webhooks.</div>
+                    </div>
+                    <button id="run-rate-sim-btn" class="btn btn-primary btn-sm">Simulate 120-Req Burst</button>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                    <div>
+                      <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">
+                        Bucket Capacity: <span id="capacity-val" style="color: var(--accent-cyan); font-weight: 700;">120</span> tokens
+                      </label>
+                      <input type="range" id="capacity-slider" min="20" max="200" value="120" style="width: 100%;" />
+
+                      <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 1rem; margin-bottom: 0.4rem;">
+                        Refill Rate: <span id="refill-val" style="color: var(--accent-emerald); font-weight: 700;">15</span> tokens/sec (Max DB safe limit: 20/s)
+                      </label>
+                      <input type="range" id="refill-slider" min="5" max="35" value="15" style="width: 100%;" />
+                    </div>
+
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
+                      <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase;">Simulation Telemetry</div>
+                      <div id="sim-metrics" style="margin-top: 0.5rem; font-size: 0.85rem; line-height: 1.6; color: var(--text-muted);">
+                        Configure sliders and click <strong>Simulate 120-Req Burst</strong> to test resilience.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 2C: Algorithmic Coding Challenges -->
+          <div id="tool-coding" class="interview-tool-view" style="display: none;">
+            <div class="bento-grid">
+              <div class="bento-col-4">
+                <div class="bento-card">
+                  <div class="card-title">FDE Coding Drills</div>
+                  <div class="card-subtitle">Real-world production data challenges</div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;" id="challenge-list-container">
+                    <!-- Populated dynamically -->
+                  </div>
+
+                  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
+                    <button id="toggle-solution-btn" class="btn btn-ghost btn-sm" style="width: 100%;">
+                      Show / Hide Reference Solution
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bento-col-8">
+                <div class="bento-card bento-card-highlight">
+                  <div class="card-header-flex">
+                    <div>
+                      <div class="card-title" id="challenge-title">Streaming Log Parser</div>
+                      <div class="card-subtitle" id="challenge-desc">Filter high latency logs without throwing errors.</div>
+                    </div>
+                    <button id="run-code-btn" class="btn btn-emerald btn-sm">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Run Test Suite
+                    </button>
+                  </div>
+
+                  <div class="code-editor-container" style="margin-top: 1rem;">
+                    <div class="code-editor-header">
+                      <span>JavaScript ES6 Runtime (In-Browser Offline Sandbox)</span>
+                      <span id="code-status-pill">Ready</span>
+                    </div>
+                    <textarea id="challenge-editor" class="code-textarea" spellcheck="false"></textarea>
+                    <div class="test-output-console" id="challenge-output">
+                      Click "Run Test Suite" to execute test fixtures...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 2D: Systems Architecture Scenarios -->
+          <div id="tool-scenarios" class="interview-tool-view" style="display: none;">
+            <div class="bento-grid">
+              <div class="bento-col-12">
+                <div class="bento-card bento-card-highlight">
+                  <div class="card-header-flex">
+                    <div>
+                      <span class="tag-badge" style="color: var(--accent-rose); border-color: rgba(244,63,94,0.3)">Live Client Simulation</span>
+                      <h2 class="card-title" id="scenario-title" style="margin-top: 0.4rem;">Clinical Data Fusion in an Air-Gapped Hospital Network</h2>
+                      <div class="card-subtitle" id="scenario-client">Client: Regional Health Authority (14 Hospitals)</div>
+                    </div>
+                    <button id="restart-scenario-btn" class="btn btn-secondary btn-sm">Restart Scenario</button>
+                  </div>
+
+                  <div id="scenario-body" style="margin-top: 1.25rem;">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ====================================================================
+             SECTION 3: FDE JOB HUNTING
+             ==================================================================== -->
+        <section id="section-jobhunting" class="view-section" style="display: none;">
+          <div class="section-banner">
+            <span class="section-tag">Career Acceleration // Section 3</span>
+            <h1 class="section-title">Forward Deployed Engineering Career Pipeline</h1>
+            <p class="section-description">
+              Manage your target enterprise AI companies, track open-source portfolio milestones, and audit your resume bullets with quantified impact formulas.
+            </p>
+          </div>
+
+          <!-- Job Pipeline Sub-Tabs -->
+          <div class="subnav-tabs" role="tablist">
+            <button class="subnav-tab active" data-job-view="kanban">1. Application Pipeline Kanban</button>
+            <button class="subnav-tab" data-job-view="portfolio">2. Open-Source Portfolio Tracker</button>
+            <button class="subnav-tab" data-job-view="resume">3. Resume Optimization & Action Verbs</button>
+          </div>
+
+          <!-- View 3A: Kanban Board -->
+          <div id="job-view-kanban" class="job-subview">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Drag, click, and manage interview pipelines completely offline in IndexedDB.
+              </div>
+              <button id="open-add-job-btn" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Opportunity
+              </button>
+            </div>
+
+            <div class="kanban-board" id="kanban-board-container">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- View 3B: Portfolio Tracker -->
+          <div id="job-view-portfolio" class="job-subview" style="display: none;">
+            <div class="bento-grid" id="portfolio-projects-grid">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- View 3C: Resume Optimization -->
+          <div id="job-view-resume" class="job-subview" style="display: none;">
+            <div class="bento-grid">
+              <!-- Resume Impact Auditor -->
+              <div class="bento-col-6">
+                <div class="bento-card bento-card-highlight">
+                  <div class="card-title">FDE Resume Impact Auditor</div>
+                  <div class="card-subtitle">Top companies filter for quantifiable business ARR impact, deployment velocity, and infrastructure constraints.</div>
+
+                  <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;" id="resume-checklist-container">
+                    <!-- Populated dynamically -->
+                  </div>
+
+                  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.85rem; color: var(--text-muted)">Audit Score</span>
+                    <span id="resume-score" style="font-weight: 800; font-size: 1.2rem; color: var(--accent-cyan)">85 / 100</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action-Verb & Impact Phrase Library -->
+              <div class="bento-col-6">
+                <div class="bento-card">
+                  <div class="card-title">FDE High-Impact Phrasing Vault</div>
+                  <div class="card-subtitle">Click any bullet point to copy it directly to your clipboard.</div>
+
+                  <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.65rem;" id="resume-phrases-container">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ====================================================================
+             SECTION 4: FAST-LEARNING ACCELERATOR
+             ==================================================================== -->
+        <section id="section-accelerator" class="view-section" style="display: none;">
+          <div class="section-banner">
+            <span class="section-tag">High-Velocity Assimilation // Section 4</span>
+            <h1 class="section-title">Fast-Learning Accelerator & Knowledge Vault</h1>
+            <p class="section-description">
+              Capture quick field notes, stash critical deployment code snippets, monitor overall FDE readiness metrics, and run timed study sessions.
+            </p>
+          </div>
+
+          <!-- Top Bento Stats Overview -->
+          <div class="bento-grid" style="margin-bottom: 1.5rem;">
+            <div class="bento-col-3">
+              <div class="metrics-stat-card">
+                <div class="metric-circle" style="background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.3);">
+                  %
+                </div>
+                <div>
+                  <div class="metric-num" id="stat-readiness">68%</div>
+                  <div class="metric-label">Overall Readiness</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-col-3">
+              <div class="metrics-stat-card">
+                <div class="metric-circle" style="background: rgba(16,185,129,0.15); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3);">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div>
+                  <div class="metric-num" id="stat-modules-mastered">3 / 8</div>
+                  <div class="metric-label">Modules Mastered</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-col-3">
+              <div class="metrics-stat-card">
+                <div class="metric-circle" style="background: rgba(99,102,241,0.15); color: var(--accent-indigo); border: 1px solid rgba(99,102,241,0.3);">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                  <div class="metric-num" id="stat-flashcards-reviewed">24</div>
+                  <div class="metric-label">Drills Completed</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-col-3">
+              <div class="metrics-stat-card">
+                <div class="metric-circle" style="background: rgba(245,158,11,0.15); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.3);">
+                  🔥
+                </div>
+                <div>
+                  <div class="metric-num" id="stat-study-streak">5 Days</div>
+                  <div class="metric-label">Active Streak</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Focus Pomodoro Timer & Backend Script Triggers -->
+          <div class="bento-grid" style="margin-bottom: 1.5rem;">
+            <div class="bento-col-6">
+              <div class="bento-card bento-card-highlight">
+                <div class="card-header-flex">
+                  <div>
+                    <div class="card-title">Focused Deep-Work Pomodoro Timer</div>
+                    <div class="card-subtitle">25-minute uninterrupted study block for intense technical ingestion</div>
+                  </div>
+                  <div id="pomodoro-timer-display" style="font-family: var(--font-mono); font-size: 1.75rem; font-weight: 800; color: var(--accent-cyan);">
+                    25:00
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                  <button id="pomo-start-btn" class="btn btn-primary btn-sm">Start Focus Block</button>
+                  <button id="pomo-pause-btn" class="btn btn-secondary btn-sm">Pause</button>
+                  <button id="pomo-reset-btn" class="btn btn-ghost btn-sm">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Backend Orchestration & Script Trigger Hub -->
+            <div class="bento-col-6">
+              <div class="bento-card">
+                <div class="card-header-flex">
+                  <div>
+                    <div class="card-title">Node.js Backend Script Triggers</div>
+                    <div class="card-subtitle">Trigger automated local verification scripts via pure Express session orchestration</div>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+                  <button class="btn btn-secondary btn-sm trigger-script-btn" data-script="airgap-audit">
+                    ⚡ Run Air-Gap Network Audit
+                  </button>
+                  <button class="btn btn-secondary btn-sm trigger-script-btn" data-script="synthetic-data-gen">
+                    🧪 Generate 50 Synthetic Records
+                  </button>
+                  <button class="btn btn-secondary btn-sm trigger-script-btn" data-script="token-bucket-sim">
+                    📊 Probe Ingest Health
+                  </button>
+                </div>
+
+                <div id="backend-script-output" style="margin-top: 0.75rem; background: #06090e; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem; font-family: var(--font-mono); font-size: 0.75rem; color: #a5f3fc; max-height: 90px; overflow-y: auto;">
+                  Ready to trigger backend session scripts...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes Vault & Snippets Stash -->
+          <div class="bento-grid">
+            <!-- Left: Quick Notes System -->
+            <div class="bento-col-6">
+              <div class="bento-card">
+                <div class="card-header-flex">
+                  <div>
+                    <div class="card-title">Quick Field Notes & Takeaways</div>
+                    <div class="card-subtitle">Instant offline persistence via IndexedDB</div>
+                  </div>
+                  <button id="open-add-note-btn" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Note
+                  </button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; max-height: 480px; overflow-y: auto;" id="notes-container">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Interactive Code Snippet Stash -->
+            <div class="bento-col-6">
+              <div class="bento-card">
+                <div class="card-header-flex">
+                  <div>
+                    <div class="card-title">Production Code Snippets Stash</div>
+                    <div class="card-subtitle">Copy-pasteable field utilities for air-gap and cloud deployments</div>
+                  </div>
+                  <button id="open-add-snippet-btn" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Snippet
+                  </button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; max-height: 480px; overflow-y: auto;" id="snippets-container">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ====================================================================
+         MODALS & DIALOGS
+         ==================================================================== -->
+
+    <!-- Modal 1: Dynamic Learning Module Reader -->
+    <div id="module-reader-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div>
+            <span id="reader-track-badge" class="tag-badge" style="color: var(--accent-cyan)">Core Tech Stack</span>
+            <h2 id="reader-title" class="card-title" style="margin-top: 0.3rem;">Enterprise REST, gRPC & Streaming</h2>
+          </div>
+          <button id="close-reader-btn" class="btn btn-ghost btn-sm" style="font-size: 1.25rem;">✕</button>
+        </div>
+
+        <div class="modal-body" id="reader-content-body">
+          <!-- Populated dynamically with Markdown & interactive quiz -->
+        </div>
+
+        <div class="modal-footer">
+          <button id="reader-export-md-btn" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export as Markdown
+          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="reader-toggle-mastered-btn" class="btn btn-primary btn-sm">
+              Mark as Mastered
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Data Ingestion & Workspace Sync -->
+    <div id="ingest-modal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 620px;">
+        <div class="modal-header">
+          <h2 class="card-title">Local Data & Ingestion Engine</h2>
+          <button id="close-ingest-btn" class="btn btn-ghost btn-sm">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            This application is 100% offline-first. You can ingest new module packs from static JSON files, download the entire curriculum archive, or backup your notes and progress.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 1rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Ingest Static JSON Catalog</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Upload custom module packs or updated question banks.</p>
+              <input type="file" id="catalog-file-input" accept=".json,.md" style="font-size: 0.8rem; color: var(--text-muted);" />
+            </div>
+
+            <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 1rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Download Static Curriculum</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Save the complete curriculum catalog JSON for offline study or local version control.</p>
+              <button id="download-catalog-btn" class="btn btn-secondary btn-sm">Download catalog.json</button>
+            </div>
+
+            <div style="background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 1rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Complete Workspace Backup</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Export your notes, job hunt pipeline, flashcard scores, and code snippets.</p>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="export-workspace-btn" class="btn btn-primary btn-sm">Export Workspace (JSON)</button>
+                <button id="import-workspace-trigger-btn" class="btn btn-secondary btn-sm">Restore from Backup</button>
+                <input type="file" id="workspace-import-input" accept=".json" style="display: none;" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: Add/Edit Job Opportunity -->
+    <div id="job-modal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 540px;">
+        <div class="modal-header">
+          <h2 class="card-title" id="job-modal-title">Add Target Opportunity</h2>
+          <button id="close-job-modal-btn" class="btn btn-ghost btn-sm">✕</button>
+        </div>
+        <div class="modal-body">
+          <form id="job-form" style="display: flex; flex-direction: column; gap: 0.9rem;">
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Company Name *</label>
+              <input type="text" id="job-company" required class="search-input" style="width: 100%;" placeholder="e.g. Palantir Technologies" />
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Role Title *</label>
+              <input type="text" id="job-role" required class="search-input" style="width: 100%;" placeholder="Forward Deployed Software Engineer" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Stage</label>
+                <select id="job-stage" class="search-input" style="width: 100%;">
+                  <option value="wishlist">Target / Wishlist</option>
+                  <option value="applied">Applied</option>
+                  <option value="screening">Recruiter Screen</option>
+                  <option value="technical">Technical / Take-Home</option>
+                  <option value="onsite">Solution Design Onsite</option>
+                  <option value="offer">Offer Received</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Target Comp</label>
+                <input type="text" id="job-comp" class="search-input" style="width: 100%;" placeholder="$190k - $240k" />
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Key Sector & Client Focus</label>
+              <input type="text" id="job-sector" class="search-input" style="width: 100%;" placeholder="Defense, Healthcare, Commercial Foundry" />
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Next Milestone / Notes</label>
+              <textarea id="job-notes" class="search-input" style="width: 100%; min-height: 70px; resize: vertical;" placeholder="Prep for distributed systems trade-off interview..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+              <button type="button" id="cancel-job-modal-btn" class="btn btn-ghost btn-sm">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm">Save Opportunity</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Add Field Note -->
+    <div id="note-modal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 580px;">
+        <div class="modal-header">
+          <h2 class="card-title">Add Field Note</h2>
+          <button id="close-note-modal-btn" class="btn btn-ghost btn-sm">✕</button>
+        </div>
+        <div class="modal-body">
+          <form id="note-form" style="display: flex; flex-direction: column; gap: 0.9rem;">
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Title *</label>
+              <input type="text" id="note-title" required class="search-input" style="width: 100%;" placeholder="e.g. Dealing with Corporate SSL Interception Proxies" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Category</label>
+                <select id="note-category" class="search-input" style="width: 100%;">
+                  <option value="Air-Gap">Air-Gap & Networking</option>
+                  <option value="Databases">Databases & Vector</option>
+                  <option value="LLMs">LLMs & RAG</option>
+                  <option value="Client-Field">Client Politics & Scoping</option>
+                  <option value="General">General Engineering</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Tags (comma-separated)</label>
+                <input type="text" id="note-tags" class="search-input" style="width: 100%;" placeholder="curl, envoy, mtls" />
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Content (Markdown supported)</label>
+              <textarea id="note-content" required class="search-input" style="width: 100%; min-height: 140px; font-family: var(--font-mono); font-size: 0.85rem;" placeholder="Key command or field insight..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+              <button type="button" id="cancel-note-modal-btn" class="btn btn-ghost btn-sm">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm">Save Note</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Add Code Snippet -->
+    <div id="snippet-modal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 620px;">
+        <div class="modal-header">
+          <h2 class="card-title">Add Code Snippet</h2>
+          <button id="close-snippet-modal-btn" class="btn btn-ghost btn-sm">✕</button>
+        </div>
+        <div class="modal-body">
+          <form id="snippet-form" style="display: flex; flex-direction: column; gap: 0.9rem;">
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Snippet Title *</label>
+              <input type="text" id="snippet-title" required class="search-input" style="width: 100%;" placeholder="e.g. Export Docker Images for Offline Air-Gap" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Language</label>
+                <select id="snippet-lang" class="search-input" style="width: 100%;">
+                  <option value="bash">Bash / Shell</option>
+                  <option value="python">Python</option>
+                  <option value="sql">SQL / Postgres</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="yaml">YAML / Kubernetes</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Tag</label>
+                <input type="text" id="snippet-tag" class="search-input" style="width: 100%;" placeholder="Docker, Airgap" />
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Code *</label>
+              <textarea id="snippet-code" required class="search-input font-mono" style="width: 100%; min-height: 150px; font-size: 0.85rem;" placeholder="#!/usr/bin/env bash..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+              <button type="button" id="cancel-snippet-modal-btn" class="btn btn-ghost btn-sm">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm">Save Snippet</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 6: iOS Safari PWA Install Instructions -->
+    <div id="ios-guide-modal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 420px;">
+        <div class="modal-header">
+          <h2 class="card-title">Install on iOS Safari</h2>
+          <button id="close-ios-guide-btn" class="btn btn-ghost btn-sm">✕</button>
+        </div>
+        <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+          <p style="margin-bottom: 0.75rem;">To install FDE Mastery as an offline native app on your iPhone or iPad:</p>
+          <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-main);">
+            <li>Tap the <strong>Share</strong> icon in the bottom Safari toolbar.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Tap <strong>Add</strong> in the top-right corner.</li>
+          </ol>
+          <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-subtle);">
+            The app will launch in full standalone mode and remain functional with zero connectivity.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Main Application Script (ES Module) -->
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

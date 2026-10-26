@@ -1,0 +1,6 @@
+{
+  "name": "FDE Mastery: Offline Forward Deployed Engineering Academy",
+  "description": "A high-performance, offline-first progressive web application for mastering Forward Deployed Engineering, featuring dynamic skill modules, interview preparation tools, job hunting pipelines, and a fast-learning accelerator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

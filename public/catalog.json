@@ -1,0 +1,416 @@
+{
+  "version": "1.0.0",
+  "tracks": [
+    {
+      "id": "core-tech-stack",
+      "title": "Core Tech Stack",
+      "icon": "layers",
+      "badge": "Infrastructure & Systems",
+      "description": "Master the bread-and-butter technologies of enterprise deployment: robust APIs, distributed data persistence, container orchestration in restricted environments, and complex networking.",
+      "color": "cyan"
+    },
+    {
+      "id": "ai-ml-fundamentals",
+      "title": "AI/ML Fundamentals & Applied LLMs",
+      "icon": "cpu",
+      "badge": "GenAI & Embeddings",
+      "description": "Enterprise-grade Retrieval-Augmented Generation (RAG), agentic tool-calling workflows, local model inference under air-gap conditions, and rigorous evaluation metrics.",
+      "color": "indigo"
+    },
+    {
+      "id": "solution-architecture",
+      "title": "Solution Architecture & Delivery",
+      "icon": "shield-check",
+      "badge": "Field Deployment",
+      "description": "Field proof-of-concept scoping, reverse ETL adapters, compliance governance (SOC2/HIPAA/FedRAMP), and resilient post-deployment client handover.",
+      "color": "emerald"
+    }
+  ],
+  "modules": [
+    {
+      "id": "mod-apis-grpc",
+      "trackId": "core-tech-stack",
+      "title": "Enterprise REST, gRPC & Streaming Ingestion",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 45,
+      "tags": ["APIs", "gRPC", "Protobuf", "Webhooks", "Backpressure"],
+      "summary": "Architect high-throughput ingest systems that survive flaky corporate firewalls, proxy packet inspection, and disparate client payload formats.",
+      "content": "### The FDE Reality of Enterprise APIs\n\nUnlike greenfield SaaS where you control both client and server, Forward Deployed Engineers frequently interface with legacy corporate systems (SOAP, raw SFTP drops, unversioned REST APIs) and modern microservices.\n\n#### Key Architectural Patterns\n1. **Idempotency Keys**: Never process financial or mission-critical records twice. Implement distributed idempotency using Redis or Postgres `ON CONFLICT DO NOTHING` keyed on a SHA-256 hash of the canonical payload.\n2. **gRPC with Protobuf vs REST**:\n   - **gRPC**: Preferred for internal edge-to-core telemetry. Binary Protobuf serialization reduces payload size by ~60-80% compared to JSON and provides compile-time schema contracts.\n   - **HTTP/REST with OpenAPI specs**: Used for customer-facing client webhook endpoints where enterprise firewalls inspect HTTP/1.1 headers.\n3. **Backpressure & Dead Letter Queues (DLQ)**: When client source systems send a 50,000-record burst, forward deployment nodes must apply reactive backpressure (e.g., token bucket rate limiting or Kafka buffer partitioning) instead of crashing pods.\n\n```typescript\n// Example: Idempotent Webhook Ingestion Hook\nasync function ingestClientRecord(idempotencyKey: string, payload: any) {\n  const existing = await db.query('SELECT status FROM ingest_log WHERE key = $1', [idempotencyKey]);\n  if (existing.rows.length > 0) {\n    return { status: 'DUPLICATE_IGNORED', key: idempotencyKey };\n  }\n  await db.query('INSERT INTO ingest_log (key, payload, created_at) VALUES ($1, $2, NOW())', [idempotencyKey, JSON.stringify(payload)]);\n  await eventQueue.push('records.process', payload);\n  return { status: 'ACCEPTED', key: idempotencyKey };\n}\n```\n\n#### Field Checklist for FDEs\n- [ ] Ensure all webhook responses return HTTP 202 Accepted within <200ms before doing asynchronous processing.\n- [ ] Configure mTLS (mutual TLS) certificates for client-to-edge communication.\n- [ ] Provide backward-compatible schema migration strategies.",
+      "checkpoints": [
+        "Implemented distributed idempotency guardrails",
+        "Configured gRPC keepalive ping intervals to prevent enterprise proxy teardowns",
+        "Set up Dead Letter Queue retry backoff with exponential jitter"
+      ],
+      "quiz": {
+        "question": "A client corporate proxy silently terminates idle TCP connections after 60 seconds, causing streaming gRPC calls to hang. What is the standard FDE solution?",
+        "options": [
+          "Switch to unencrypted plaintext HTTP/1.0 polling",
+          "Configure gRPC keepalive pings (e.g. 30s interval with permit_without_stream)",
+          "Ask the client CIO to replace all firewalls across 40 global branch offices",
+          "Increase the client timeout to 24 hours"
+        ],
+        "answerIndex": 1,
+        "explanation": "gRPC client keepalive pings send periodic HTTP/2 PING frames over the connection, proving traffic flow to stateful firewalls and proxies without closing the socket."
+      }
+    },
+    {
+      "id": "mod-dbs-distributed",
+      "trackId": "core-tech-stack",
+      "title": "Distributed DBs, ClickHouse & Vector Stores",
+      "difficulty": "Intermediate",
+      "estimatedMinutes": 50,
+      "tags": ["Databases", "PostgreSQL", "ClickHouse", "VectorDB", "OLAP"],
+      "summary": "Select and tune hybrid OLTP/OLAP storage engines capable of sub-second analytical queries across millions of client events.",
+      "content": "### Polyglot Persistence in the Field\n\nAn FDE rarely uses a single database. The standard production topology comprises:\n\n1. **OLTP (PostgreSQL)**: Transactional state, audit trails, user permissions, and relational schemas.\n2. **OLAP (ClickHouse / DuckDB)**: High-speed analytical aggregations (e.g., querying 100M telemetry logs in 40ms).\n3. **Vector Database (pgvector, Qdrant, Milvus)**: High-dimensional embeddings index for semantic search and RAG retrieval.\n\n#### Schema Tuning for High Concurrency\n- **PostgreSQL Partitioning**: Partition historical logs by month using declarative range partitioning to allow instant dropping of stale partitions without vacuum bloat.\n- **HNSW vs IVFFlat for Vectors**: Prefer HNSW (Hierarchical Navigable Small World) for sub-5ms query latency and incremental updates; use IVFFlat only when RAM is strictly constrained.\n\n```sql\n-- Creating an optimized pgvector index for 1536-dim embeddings\nCREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE document_chunks (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    tenant_id VARCHAR(64) NOT NULL,\n    content TEXT NOT NULL,\n    embedding vector(1536)\n);\nCREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops)\nWITH (m = 16, ef_construction = 64);\n```\n\n#### Field Takeaway\nAlways design multi-tenant isolation from Day 1. Ensure `tenant_id` is indexed and enforced via Postgres Row-Level Security (RLS) or database-per-tenant architectures for strict banking/defense clients.",
+      "checkpoints": [
+        "Enabled Row-Level Security (RLS) for multi-tenant isolation",
+        "Benchmarked HNSW index memory footprint against host RAM",
+        "Established ClickHouse MergeTree table partitioning scheme"
+      ],
+      "quiz": {
+        "question": "Why is ClickHouse preferred over standard PostgreSQL for client audit telemetry aggregation?",
+        "options": [
+          "ClickHouse supports ACID multi-table transactions better than Postgres",
+          "ClickHouse utilizes columnar compression and vectorized execution for 100x faster scans on analytical aggregations",
+          "ClickHouse requires zero memory to run",
+          "Postgres cannot store strings longer than 255 characters"
+        ],
+        "answerIndex": 1,
+        "explanation": "ClickHouse stores data column-by-column rather than row-by-row, compressing similar data types dramatically and reading only the required columns during aggregations."
+      }
+    },
+    {
+      "id": "mod-docker-airgap",
+      "trackId": "core-tech-stack",
+      "title": "Docker & Air-Gapped Kubernetes Topologies",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 60,
+      "tags": ["Docker", "Kubernetes", "Air-Gapped", "Helm", "Security"],
+      "summary": "Package, ship, and orchestrate production containers inside classified, zero-internet client bastions.",
+      "content": "### What is an 'Air-Gapped' Deployment?\n\nAn air-gapped system has zero physical or logical connection to the public internet. No `docker pull`, no `npm install`, no external DNS.\n\n#### The Packaging Lifecycle\n1. **Pre-caching & Image Tarballs**:\n   ```bash\n   # On your connected workstation:\n   docker save myapp:v1.4.0 redis:7.2-alpine postgres:16 | gzip > fde_bundle_v1.4.0.tar.gz\n   # Inside client air-gapped jumpbox:\n   docker load -i fde_bundle_v1.4.0.tar.gz\n   docker tag myapp:v1.4.0 internal-registry.client.local/fde/myapp:v1.4.0\n   docker push internal-registry.client.local/fde/myapp:v1.4.0\n   ```\n2. **K3s / MicroK8s Deployment**: Lightweight, single-binary Kubernetes distributions designed for edge workstations and on-prem VMs.\n3. **Local Helm Chart Bundles**: Export charts using `helm package` and inject `.Values.global.imageRegistry` pointing to the customer's internal Harbor/Nexus registry.",
+      "checkpoints": [
+        "Packaged multi-arch container tarballs with cryptographic SHA-256 checksums",
+        "Configured Helm values with internal private registry overrides",
+        "Verified non-root container execution (UID 10001) for strict client PodSecurityStandards"
+      ],
+      "quiz": {
+        "question": "When deploying in an air-gapped client environment, what happens if your Dockerfile has 'RUN npm install' during container startup?",
+        "options": [
+          "It downloads packages from the local router",
+          "It fails immediately because the container cannot reach registry.npmjs.org",
+          "It automatically switches to satellite internet",
+          "Docker caches all 2 million npm packages automatically"
+        ],
+        "answerIndex": 1,
+        "explanation": "In an air-gap, public networks are unreachable. All dependencies must be baked into the image layers during your build phase, or mirrored into an internal private Artifactory repository."
+      }
+    },
+    {
+      "id": "mod-rag-architecture",
+      "trackId": "ai-ml-fundamentals",
+      "title": "Enterprise RAG: Hybrid Search & Re-Ranking",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 55,
+      "tags": ["RAG", "Embeddings", "Hybrid-Search", "Cohere", "BM25"],
+      "summary": "Build hallucination-resistant retrieval pipelines fusing keyword BM25 and vector semantic embeddings with cross-encoder re-ranking.",
+      "content": "### Why Naive Vector Search Fails in Enterprise\n\nEnterprise users search for precise acronyms, part numbers, employee IDs (e.g., 'Form 10-K Section 4.2' or 'Part #X-9021'). Dense vector embeddings alone often miss these exact matches because embeddings encode semantic meaning rather than lexical tokens.\n\n#### The Production Hybrid Formula\n1. **Reciprocal Rank Fusion (RRF)**:\n   Combine dense similarity rank with sparse BM25 rank:\n   $$RRF(d) = \\frac{1}{60 + rank_{dense}(d)} + \\frac{1}{60 + rank_{sparse}(d)}$$\n2. **Cross-Encoder Re-Ranking**: Take the top 30 candidates from hybrid search and score them with a small cross-encoder model (e.g., `bge-reranker-large` or Cohere Rerank) to produce the definitive top 5 chunks passed into the LLM context window.\n3. **Contextual Compression & Citation Tracking**: Force the model to generate bracketed footnotes pointing to chunk UUIDs for verifiable auditability.",
+      "checkpoints": [
+        "Implemented Reciprocal Rank Fusion (RRF) algorithm",
+        "Set up chunking strategy with semantic sentence boundary detection (256-512 tokens)",
+        "Added strict citation verification checks before rendering answers to client"
+      ],
+      "quiz": {
+        "question": "What is the primary benefit of passing retrieved candidate chunks through a Cross-Encoder Re-Ranker?",
+        "options": [
+          "It speeds up network latency by 10x",
+          "It performs full joint cross-attention between query and chunk tokens, yielding much higher precision relevance scores than bi-encoders",
+          "It compresses the database size on disk",
+          "It removes the need for any language model"
+        ],
+        "answerIndex": 1,
+        "explanation": "Bi-encoders calculate embeddings independently and use cosine similarity, losing cross-token interactions. Cross-encoders attend to both query and document tokens simultaneously, catching subtle nuances."
+      }
+    },
+    {
+      "id": "mod-tool-calling-agents",
+      "trackId": "ai-ml-fundamentals",
+      "title": "Agentic Tool-Calling & Open Notebook Frameworks",
+      "difficulty": "Intermediate",
+      "estimatedMinutes": 45,
+      "tags": ["Agents", "Tool-Calling", "OpenNotebooks", "JSON-Schema", "Validation"],
+      "summary": "Equip LLMs with deterministic execution tools, sandbox environments, and verifiable validation loops.",
+      "content": "### Moving Beyond Chatbots to Action Engines\n\nForward Deployed Engineers don't build chat interfaces that write poetry—they build agents that inspect client database schemas, generate SQL queries, validate syntax in read-only sandbox replicas, and execute automated reports.\n\n#### Safe Tool Calling Architecture\n1. **Strict JSON Schema Enforcement**: Define function tools with rigid JSON schemas (`type`, `properties`, `required`, `additionalProperties: false`).\n2. **Human-in-the-Loop Confirmation**: Any destructive action (DELETE, UPDATE, Email dispatch) must return a pending approval token requiring explicit human client sign-off.\n3. **Sandboxed Code Execution**: Run model-generated code in isolated WebAssembly or gVisor microVMs with strict timeout limits (e.g. 5 seconds) and zero egress networking.",
+      "checkpoints": [
+        "Created JSON Schema declarations for custom client tools",
+        "Enforced read-only transaction isolation for AI SQL query tools",
+        "Implemented deterministic Pydantic / Zod schema validation on model tool outputs"
+      ],
+      "quiz": {
+        "question": "Why is runtime schema validation (e.g., using Zod or Pydantic) required on LLM tool-call arguments even when JSON mode is enabled?",
+        "options": [
+          "JSON mode guarantees syntax, but the model can still generate missing parameters, invalid enum values, or halluncinated types",
+          "Runtime validation speeds up the model's token generation rate",
+          "Validation prevents the browser from refreshing",
+          "LLMs refuse to generate text without Zod"
+        ],
+        "answerIndex": 0,
+        "explanation": "JSON mode ensures valid JSON syntax, but does not guarantee the arguments adhere to your business rules, schema constraints, or correct parameter types."
+      }
+    },
+    {
+      "id": "mod-local-llms",
+      "trackId": "ai-ml-fundamentals",
+      "title": "Local Inference & vLLM On-Premise Sizing",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 50,
+      "tags": ["vLLM", "Quantization", "Ollama", "AWQ", "GPU-VRAM"],
+      "summary": "Size GPU hardware, configure PagedAttention with vLLM, and run quantized open-weights models (Llama-3, Qwen-2.5) on client premises.",
+      "content": "### GPU VRAM Math for FDEs\n\nWhen deploying on-prem, client security teams will NOT allow sending customer data to public API endpoints. You must host local models.\n\n#### The Sizing Rule of Thumb:\n- **16-bit (FP16)**: Model Parameters (Billion) × 2 GB = Base Weights VRAM\n- **8-bit (INT8)**: Model Parameters (Billion) × 1 GB = Base Weights VRAM\n- **4-bit (AWQ / GPTQ)**: Model Parameters (Billion) × 0.55 GB = Base Weights VRAM\n- **KV Cache Overhead**: $2 \\times \\text{layers} \\times \\text{heads} \\times \\text{dim} \\times \\text{precision} \\times \\text{tokens} \\times \\text{batch}$. Allocate at least 25-35% additional VRAM for KV cache to prevent Out-Of-Memory (OOM) crashes under concurrent client requests.\n\n#### Example: Sizing a 70B parameter model in 4-bit AWQ:\n$70 \\times 0.55 = 38.5\\text{ GB}$ weights. With 12 GB KV cache overhead = ~50.5 GB VRAM $\\rightarrow$ Requires 1× NVIDIA A100 (80GB) or 2× RTX 3090/4090 (24GB each with tensor parallelism = 2).",
+      "checkpoints": [
+        "Calculated VRAM budgets for FP16 vs AWQ 4-bit quantization",
+        "Configured tensor parallelism across multi-GPU client nodes",
+        "Tuned vLLM `--max-model-len` and `--gpu-memory-utilization` flags"
+      ],
+      "quiz": {
+        "question": "What is the primary breakthrough of vLLM's PagedAttention algorithm for high-concurrency enterprise inference?",
+        "options": [
+          "It rewrites Python into C++",
+          "It manages KV cache memory like virtual memory pages in an OS, virtually eliminating fragmentation and boosting throughput 2-4x",
+          "It downloads weights over Bluetooth",
+          "It disables attention mechanisms completely"
+        ],
+        "answerIndex": 1,
+        "explanation": "PagedAttention treats KV cache allocations non-contiguously like virtual memory pages, preventing massive internal and external memory fragmentation."
+      }
+    },
+    {
+      "id": "mod-poc-scoping",
+      "trackId": "solution-architecture",
+      "title": "Field POC Scoping & Legacy Reverse-Engineering",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 60,
+      "tags": ["Scoping", "Client-Discovery", "POC", "Reverse-ETL", "SLA"],
+      "summary": "Turn ambiguous customer pain into high-velocity 30-day proof-of-concept deployments with clear quantitative success criteria.",
+      "content": "### The 30-Day Forward Deployment Playbook\n\nFDEs distinguish themselves by ruthless velocity. In enterprise sales cycles, a working demo on client data in Week 2 beats 100 pages of PowerPoint architecture diagrams.\n\n#### The 4-Week Milestone Framework:\n- **Week 1: Data Access & Bastion Onboarding**: Secure VPN tokens, SSH jumpbox credentials, export sample CSVs/database dumps, establish security boundary.\n- **Week 2: Minimum Lovable Integration**: Ingest real customer schema into internal pipeline; produce first working end-to-end data flow with synthetic or obfuscated test data.\n- **Week 3: Field Validation & Corner Cases**: Walk client power users through real workflows; identify missing edge cases (weird date formats, legacy encoding like Latin-1, null IDs).\n- **Week 4: Executive POC Debrief**: Present quantitative business ROI: 'Reduced manual loan processing from 4.2 hours to 8 minutes while maintaining 99.4% audit accuracy.'",
+      "checkpoints": [
+        "Drafted mutual Statement of Work (SOW) with 3 measurable success metrics",
+        "Built synthetic data obfuscator to protect PII during preliminary testing",
+        "Established weekly executive milestone demo cadence"
+      ],
+      "quiz": {
+        "question": "What is the single biggest risk factor leading to stalled enterprise FDE proofs of concept?",
+        "options": [
+          "Choosing CSS Grid over Flexbox",
+          "Waiting 4 weeks for client InfoSec and VPN approvals without establishing an offline synthetic data plan",
+          "Writing code in TypeScript instead of Java",
+          "Using dark mode instead of light mode"
+        ],
+        "answerIndex": 1,
+        "explanation": "Security access delays stall 70% of enterprise engagements. Savvy FDEs immediately request sample sanitized datasets or generate synthetic schemas to build the pipeline while waiting for network access."
+      }
+    },
+    {
+      "id": "mod-compliance-airgap",
+      "trackId": "solution-architecture",
+      "title": "Security, Compliance & Audit Trails (SOC2, HIPAA, FedRAMP)",
+      "difficulty": "Intermediate",
+      "estimatedMinutes": 45,
+      "tags": ["SOC2", "HIPAA", "Audit-Log", "Encryption", "PII-Masking"],
+      "summary": "Bake zero-trust cryptography, immutable audit logging, and automated PII redaction directly into deployment artifacts.",
+      "content": "### Passing the Enterprise InfoSec Audit\n\nWhen a Fortune 100 CISO reviews your deployed software, they evaluate three fundamental pillars:\n\n1. **Data in Transit and at Rest**:\n   - Encryption at rest: AES-256 with customer-managed keys (CMK) via AWS KMS or HashiCorp Vault.\n   - Encryption in transit: TLS 1.3 only, deprecating TLS 1.0/1.1.\n2. **Immutable Audit Trails**:\n   - Every read, write, export, and model query must write an append-only audit event containing: `timestamp_utc`, `actor_id`, `client_ip`, `resource_arn`, `action_type`, `sha256_result_hash`.\n3. **Automated PII / PHI Redaction**:\n   - Run lightweight regex and NER (Named Entity Recognition) tokenizers before sending prompts to retrieval indices to mask Social Security Numbers, Credit Cards, and Medical IDs.",
+      "checkpoints": [
+        "Implemented SHA-256 tamper-evident log hashing",
+        "Set up Presidio or custom regex PII masking filters",
+        "Generated automated compliance verification report"
+      ],
+      "quiz": {
+        "question": "What guarantees the tamper-evident integrity of an append-only enterprise audit log?",
+        "options": [
+          "Storing it on an encrypted USB thumb drive",
+          "Cryptographic hash chaining where each log entry includes the SHA-256 hash of the previous log record",
+          "Setting the file permissions to read-only in Windows Explorer",
+          "Writing the logs in ALL CAPS"
+        ],
+        "answerIndex": 1,
+        "explanation": "Hash chaining (like a Merkle chain or git commit history) ensures that if any past record is modified or deleted, the subsequent hashes will fail verification immediately."
+      }
+    }
+  ],
+  "flashcards": [
+    {
+      "id": "fc-1",
+      "deck": "System Design for FDE",
+      "question": "What is the difference between an FDE (Forward Deployed Engineer) and a traditional Solutions Architect?",
+      "answer": "A Solutions Architect primarily designs high-level diagrams, scopes integrations, and advises clients during pre-sales. An FDE writes production code, deploys containerized services directly into client infrastructure, debugs network/DB bottlenecks on-site, and owns end-to-end delivery.",
+      "proTip": "In interviews, emphasize hands-on coding + client diplomacy. You are a full-stack engineer who thrives in production client bastions."
+    },
+    {
+      "id": "fc-2",
+      "deck": "System Design for FDE",
+      "question": "How do you handle an on-premise client environment with strictly NO outbound internet access (Air-Gapped)?",
+      "answer": "1. Build and test all container images offsite.\n2. Export images via `docker save` into encrypted tar archives.\n3. Securely transfer archives via client-approved encrypted physical media or bastion SFTP.\n4. Load images via `docker load` into the customer's internal private registry (Harbor/Nexus).\n5. Deploy via offline Helm charts with private registry image paths.",
+      "proTip": "Mention checksum validation (sha256sum) and license file verification during offline container bootstrap."
+    },
+    {
+      "id": "fc-3",
+      "deck": "System Design for FDE",
+      "question": "What is mTLS and why do enterprise security teams mandate it for service-to-service communication?",
+      "answer": "Mutual TLS (mTLS) requires BOTH the client and the server to present cryptographic X.509 certificates to authenticate each other before establishing an encrypted TLS connection. This guarantees zero-trust identity verification even if an internal network is breached.",
+      "proTip": "Commonly managed at the infrastructure layer using Envoy proxies or a Service Mesh like Istio or Linkerd."
+    },
+    {
+      "id": "fc-4",
+      "deck": "Client Scoping & Politics",
+      "question": "A client VP demands a feature in Week 2 that will derail the agreed 30-day POC timeline. How do you respond?",
+      "answer": "1. Validate their underlying business goal empathetically.\n2. Assess impact against the mutual Statement of Work (SOW) success metrics.\n3. Present a trade-off: 'We can incorporate this, but it will shift Milestone 3 by 5 days, or we can catalog it as Phase 2 Priority #1 immediately following successful POC sign-off.'\n4. Document the decision in writing.",
+      "proTip": "Never say flat 'No'; frame the conversation around protecting their project's executive deadline and quantifiable ROI."
+    },
+    {
+      "id": "fc-5",
+      "deck": "Client Scoping & Politics",
+      "question": "The client's internal DBA team is skeptical and resistant to your new platform. How do you win them over?",
+      "answer": "DBAs fear 2:00 AM outages, performance degradation, and unvetted schemas. Win them over by: providing read-only replica connection architectures, sharing exact SQL query plans with EXPLAIN ANALYZE, respecting their maintenance windows, and including them in architecture reviews.",
+      "proTip": "Show humility and respect for their existing infrastructure; they hold the keys to the database credentials."
+    },
+    {
+      "id": "fc-6",
+      "deck": "Docker & Distributed Systems",
+      "question": "What is the primary difference between HNSW and IVFFlat vector index algorithms?",
+      "answer": "IVFFlat partitions vector space into Voronoi cells via k-means clustering; it uses low RAM and builds fast, but requires retraining when data shifts and has lower recall. HNSW builds a multi-layer graph of vectors; it uses more RAM and builds slower, but provides exceptional 99%+ recall and fast sub-5ms query times.",
+      "proTip": "Recommend HNSW for production search unless the customer has strict RAM limits under 16GB."
+    },
+    {
+      "id": "fc-7",
+      "deck": "Docker & Distributed Systems",
+      "question": "Explain the concept of Exponential Backoff with Jitter in network retry logic.",
+      "answer": "When an API fails or throttles, retrying immediately can trigger a 'thundering herd' that permanently crashes the server. Exponential backoff doubles the wait time after each attempt ($t = base \\times 2^{attempt}$). Adding random 'jitter' distributes retry attempts across time, breaking concurrency sync.",
+      "proTip": "Formula: $delay = \\text{random}(0, \\min(\\text{cap}, \\text{base} \\times 2^{\\text{attempt}}))$."
+    },
+    {
+      "id": "fc-8",
+      "deck": "Algorithmic Edge Cases",
+      "question": "How do you detect and reconcile concurrent updates to the same entity across distributed offline nodes?",
+      "answer": "Vector Clocks or Version Vectors. Each node maintains a logical counter vector. If vector A dominantly exceeds vector B across all clocks, A is causally newer. If clocks conflict, resolve via Last-Write-Wins (LWW) with synchronized NTP or trigger application-level merge functions.",
+      "proTip": "In browser offline apps, CRDTs (Conflict-free Replicated Data Types) or UUID version tokens provide reliable reconciliation."
+    }
+  ],
+  "puzzles": [
+    {
+      "id": "puzzle-airgap-routing",
+      "title": "Air-Gapped Reverse Proxy Topology",
+      "description": "Configure the reverse proxy routing hops for a client enterprise network. Incoming requests from internal analyst workstations must route through Bastion-A, authenticate against LDAP, query the Read-Only DB, and NEVER touch the external internet router.",
+      "nodes": [
+        {"id": "analyst", "label": "Analyst Workstation", "type": "source"},
+        {"id": "bastion", "label": "Internal Reverse Proxy (Envoy)", "type": "proxy"},
+        {"id": "ldap", "label": "Corporate LDAP Auth", "type": "auth"},
+        {"id": "db", "label": "Read-Only Postgres Replica", "type": "storage"},
+        {"id": "internet", "label": "Public Internet Gateway (FORBIDDEN)", "type": "danger"}
+      ],
+      "validPath": ["analyst", "bastion", "ldap", "db"],
+      "hint": "Ensure the path validates identity via LDAP before touching data, and never includes the external gateway!"
+    },
+    {
+      "id": "puzzle-rate-limiter",
+      "title": "Token Bucket Rate Limiter Tuning",
+      "description": "A client webhook source sends bursts of 120 requests every 10 seconds. Your ingest worker can process 15 requests per second without database CPU spiking past 75%. Tune the bucket capacity and refill rate to prevent request drops (429) while guaranteeing DB stability.",
+      "targetBurst": 120,
+      "maxDbRps": 20,
+      "recommendedCapacity": 120,
+      "recommendedRefillRate": 15
+    }
+  ],
+  "codingChallenges": [
+    {
+      "id": "challenge-streaming-parser",
+      "title": "High-Throughput Log Stream & SLA Breaker",
+      "description": "Write a function `parseAndFilterLogs(rawLogs, maxLatencyMs, requiredTenant)` that takes a newline-delimited stream of JSON logs, filters for a specific tenant, ignores malformed lines without throwing errors, and returns an array of log IDs where `latency_ms` exceeded `maxLatencyMs`.",
+      "starterCode": "function parseAndFilterLogs(rawLogs, maxLatencyMs, requiredTenant) {\n  // rawLogs is a string of newline-delimited JSON objects\n  // e.g.: '{\"id\":\"log-1\",\"tenant\":\"acme\",\"latency_ms\":120}\\n{\"id\":\"log-2\",\"tenant\":\"acme\",\"latency_ms\":450}'\n  const results = [];\n  // Write your implementation here\n  \n  return results;\n}",
+      "solutionCode": "function parseAndFilterLogs(rawLogs, maxLatencyMs, requiredTenant) {\n  const results = [];\n  if (!rawLogs || typeof rawLogs !== 'string') return results;\n  const lines = rawLogs.split('\\n');\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (!trimmed) continue;\n    try {\n      const obj = JSON.parse(trimmed);\n      if (obj && obj.tenant === requiredTenant && typeof obj.latency_ms === 'number' && obj.latency_ms > maxLatencyMs) {\n        if (obj.id) results.push(obj.id);\n      }\n    } catch (e) {\n      // Silently ignore corrupted lines as expected in resilient FDE ingestion\n    }\n  }\n  return results;\n}",
+      "testCases": [
+        {
+          "input": ["{\"id\":\"A1\",\"tenant\":\"acme\",\"latency_ms\":250}\n{\"id\":\"A2\",\"tenant\":\"acme\",\"latency_ms\":80}\n{\"id\":\"B1\",\"tenant\":\"other\",\"latency_ms\":999}\nMALFORMED_GARBAGE_LINE\n{\"id\":\"A3\",\"tenant\":\"acme\",\"latency_ms\":400}", 200, "acme"],
+          "expected": ["A1", "A3"],
+          "label": "Filters by tenant, ignores malformed lines, catches latency breaches"
+        },
+        {
+          "input": ["", 100, "acme"],
+          "expected": [],
+          "label": "Handles empty string gracefully"
+        }
+      ]
+    },
+    {
+      "id": "challenge-exponential-backoff",
+      "title": "Exponential Backoff with Jitter Calculator",
+      "description": "Write a deterministic function `calculateBackoffDelays(attempts, baseMs, maxCapMs, seed)` that calculates backoff delays for N retry attempts using Full Jitter formula: `delay = Math.floor((seedMultiplier * Math.min(maxCapMs, baseMs * Math.pow(2, attempt))))`.",
+      "starterCode": "function calculateBackoffDelays(attempts, baseMs, maxCapMs, factor = 0.5) {\n  // Return an array of delay numbers in milliseconds for attempts 0 to attempts - 1\n  const delays = [];\n  \n  return delays;\n}",
+      "solutionCode": "function calculateBackoffDelays(attempts, baseMs, maxCapMs, factor = 0.5) {\n  const delays = [];\n  for (let i = 0; i < attempts; i++) {\n    const exponential = baseMs * Math.pow(2, i);\n    const capped = Math.min(maxCapMs, exponential);\n    delays.push(Math.floor(capped * factor));\n  }\n  return delays;\n}",
+      "testCases": [
+        {
+          "input": [4, 100, 1000, 0.5],
+          "expected": [50, 100, 200, 400],
+          "label": "Calculates exponential doubling with 0.5 jitter factor"
+        },
+        {
+          "input": [4, 500, 1200, 1.0],
+          "expected": [500, 1000, 1200, 1200],
+          "label": "Properly respects maxCapMs ceiling"
+        }
+      ]
+    }
+  ],
+  "architectureScenarios": [
+    {
+      "id": "scenario-foundry-health",
+      "title": "Clinical Data Fusion in an Air-Gapped Hospital Network",
+      "client": "Regional Health Authority (14 Hospitals)",
+      "challenge": "The customer has 14 disparate hospital instances running legacy HL7 EHR systems. Due to strict HIPAA and state privacy laws, patient records cannot leave the hospital's on-premise private network. The CIO wants a real-time clinical dashboard for ICU bed availability and sepsis risk prediction.",
+      "stages": [
+        {
+          "stageNumber": 1,
+          "title": "Data Ingestion & Air-Gap Compliance",
+          "prompt": "How do you ingest and normalize real-time EHR feeds across the 14 hospitals without violating HIPAA boundaries?",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Deploy lightweight K3s edge pods inside each hospital datacenter that parse HL7 streams locally and de-identify patient names before transmitting aggregated telemetry to the central hospital authority node.",
+              "score": 100,
+              "feedback": "Perfect FDE approach: local de-identification preserves privacy while edge parsing removes heavy network loads."
+            },
+            {
+              "id": "b",
+              "label": "Stream all raw HL7 records over public internet to a multi-tenant cloud bucket for batch parsing with Python scripts.",
+              "score": 0,
+              "feedback": "Severe violation: sending raw protected health information (PHI) over public internet violates HIPAA and fails hospital InfoSec immediately."
+            },
+            {
+              "id": "c",
+              "label": "Ask hospital nurses to manually export CSV spreadsheets every morning and email them to your team.",
+              "score": 20,
+              "feedback": "High friction, human error prone, and violates real-time ICU triage requirements."
+            }
+          ]
+        },
+        {
+          "stageNumber": 2,
+          "title": "Model Serving & Inference Hardware",
+          "prompt": "The clinical team wants an LLM-assisted sepsis risk summarizer. The hospital datacenter has dual NVIDIA A100 (80GB) workstations without internet access.",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Package vLLM with a quantized Llama-3-70B model in AWQ 4-bit, containerize it via pre-built tarball, and serve via local OpenAI-compatible HTTP endpoint inside the internal subnet.",
+              "score": 100,
+              "feedback": "Outstanding! Fits comfortably inside 80GB VRAM, provides sub-second streaming inference, and operates 100% offline."
+            },
+            {
+              "id": "b",
+              "label": "Proxy API calls to a public commercial AI endpoint using personal API keys.",
+              "score": 0,
+              "feedback": "Disastrous! Air-gapped datacenters block outbound requests, and submitting hospital clinical text to public APIs is an immediate contract termination breach."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
