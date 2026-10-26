@@ -1,19 +1,21 @@
-const CACHE_NAME = 'fde-mastery-v1';
+const CACHE_NAME = 'fde-mastery-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/main.css',
-  '/app.js',
+  '/main.css?v=2',
+  '/app.js?v=2',
   '/manifest.json',
   '/icon.svg',
   '/catalog.json'
 ];
 
 self.addEventListener('install', (event) => {
+  // Activate immediately without waiting
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -23,6 +25,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purging outdated cache:', key);
             return caches.delete(key);
           }
         })
@@ -49,34 +52,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first with network fallback for assets and navigation
+  // Network-First with Cache Fallback strategy
+  // Ensures fresh updates are shown immediately, while preserving 100% offline functionality
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to update cache
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
-          }
-        }).catch(() => {/* Offline */});
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
-      }).catch(() => {
-        // If navigation request fails, return cached index.html
+      })
+      .catch(async () => {
+        // Offline: serve from cache
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          const fallback = await caches.match('/index.html');
+          if (fallback) return fallback;
         }
-      });
-    })
+      })
   );
 });

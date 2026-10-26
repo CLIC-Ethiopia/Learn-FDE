@@ -719,6 +719,248 @@ const PORTFOLIO_PROJECTS = [
 ];
 
 // ============================================================================
+// OVERVIEW & CAREERS DATA CONSTANTS
+// ============================================================================
+const DAY_IN_LIFE_SLOTS = [
+  {
+    id: "slot-0830",
+    time: "08:30 AM",
+    title: "Client Jumpbox & mTLS Handshake",
+    badge: "Bastion Onboarding",
+    situation: "Arrive at customer defense datacenter. The security officer hands you an air-gapped laptop with zero outbound internet. You must SSH into the internal cluster jumpbox via hardware YubiKey and verify internal container registry connectivity.",
+    commandSnippet: `ssh -i ~/.ssh/fde_bastion_key analyst@10.240.12.5 -p 2222
+# Verify internal Harbor registry connectivity over mTLS
+curl --cert /etc/ssl/client.crt --key /etc/ssl/client.key https://registry.defense.client.internal/v2/`,
+    fieldRealityCheck: "Corporate firewalls drop idle TCP sockets every 60s. Experienced FDEs immediately configure ServerAliveInterval 30 in ~/.ssh/config to prevent terminal freezes during DBA meetings."
+  },
+  {
+    id: "slot-1030",
+    time: "10:30 AM",
+    title: "DBA Schema Alignment & Reconciler",
+    badge: "Legacy Integration",
+    situation: "Meeting with the client chief DBA who is terrified your pipeline will lock their 15-year-old Oracle production database. You walk through your Change-Data-Capture (CDC) outbox pattern and demonstrate zero table locking with EXPLAIN ANALYZE.",
+    commandSnippet: `SELECT pid, query, state, age(clock_timestamp(), query_start) 
+FROM pg_stat_activity 
+WHERE state != 'idle' AND query LIKE '%fde_cdc%';
+-- Proof: CDC uses read-only replica with statement_timeout = 250ms`,
+    fieldRealityCheck: "Never debate DBAs with theoretical abstractions. Show them your exact read-only connection pool limits, replica isolation, and automated kill-switch runbooks."
+  },
+  {
+    id: "slot-1245",
+    time: "12:45 PM",
+    title: "Executive Milestone POC Demo",
+    badge: "Executive Diplomacy",
+    situation: "Live 20-minute demonstration for the Client CIO, VP of Clinical Operations, and Chief Medical Officer. You showcase the real-time ICU bed availability predictor running against their synthesized historical data feeds.",
+    commandSnippet: `curl -s -X POST http://localhost:8080/api/predict-icu \\
+  -H "Content-Type: application/json" \\
+  -d '{"hospital_id":"HOSP-09","ward":"ICU-B","time_horizon_hrs":12}'
+# Result: 99.4% precision with <45ms response time`,
+    fieldRealityCheck: "Executives don't care about your Docker multi-stage build size; they care about quantifiable ROI: 'This cut manual patient triage from 4 hours to 8 minutes.'"
+  },
+  {
+    id: "slot-1430",
+    time: "02:30 PM",
+    title: "Air-Gapped Kubernetes Hotfix",
+    badge: "Production Systems",
+    situation: "During afternoon load testing, a GPU node triggers an Out-Of-Memory (OOM) panic during 70B parameter LLM inference. You calculate the KV cache allocation budget, apply AWQ 4-bit quantization, and patch the Helm values manifest on-premise.",
+    commandSnippet: `helm upgrade --install fde-llm-engine ./charts/vllm-airgap \\
+  --set gpu.memoryUtilization=0.85 \\
+  --set model.quantization=awq \\
+  --set model.maxModelLen=4096 \\
+  --namespace fde-runtime`,
+    fieldRealityCheck: "In an air-gap, you cannot Google error codes or stack traces. You must understand Linux cgroups, memory paging, and GPU VRAM arithmetic from first principles."
+  },
+  {
+    id: "slot-1700",
+    time: "05:00 PM",
+    title: "SLA Telemetry & Client Handover",
+    badge: "Operational Handover",
+    situation: "Export immutable SHA-256 audit logs, verify that all Grafana alert thresholds are green, and conduct daily debrief with the customer technical lead. You package today's patch into an internal Git tag before boarding your flight.",
+    commandSnippet: `git tag -a v1.4.2-client-patch -m "Signed-off airgap release with audited HIPAA redaction"
+./scripts/generate_daily_sla_report.sh --tenant hospital-corp > sla_report_day12.pdf`,
+    fieldRealityCheck: "The true measure of a world-class FDE is not just making it work while you are onsite—it is ensuring it runs flawlessly without a single page after you leave."
+  }
+];
+
+const ARCHETYPE_QUESTIONS = [
+  {
+    question: "The client's corporate InfoSec team delays VPN approvals by 3 weeks, threatening your agreed 30-day POC timeline. What is your instinct?",
+    options: [
+      { text: "Build an offline synthetic schema generator and simulate the entire pipeline on your local workstation so you hit the ground running.", type: "hacker" },
+      { text: "Schedule an emergency alignment session with the client CIO to present the timeline trade-offs and negotiate temporary bastion credentials.", type: "diplomat" },
+      { text: "Extract a generalized customer integration SDK so future engagements never suffer from this same onboarding delay.", type: "pioneer" },
+      { text: "Show up in-person at their IT department with pastries and physically walk the ticket through the security manager's desk.", type: "operator" }
+    ]
+  },
+  {
+    question: "During a high-stakes executive demo, a sudden unexpected database timeout error flashes on the main dashboard screen. How do you respond?",
+    options: [
+      { text: "Smoothly explain the system's automated failover topology while gracefully switching to cached sample scenarios without missing a beat.", type: "diplomat" },
+      { text: "Open the terminal console, inspect the query execution plan in real-time, inject a temporary index, and show it resolve live.", type: "hacker" },
+      { text: "Immediately capture the trace, diagnose the client connection pool limit, and coordinate with their sysadmin to hot-patch it.", type: "operator" },
+      { text: "Note the design limitation and draft an architectural RFC for an asynchronous event-driven fallback worker.", type: "pioneer" }
+    ]
+  },
+  {
+    question: "When writing forward-deployed glue code, which trade-off philosophy resonates most with you?",
+    options: [
+      { text: "Ruthless speed and pragmatic resilience: a working demo on client data in Week 2 beats 100 pages of theoretical perfection.", type: "operator" },
+      { text: "Deep systems correctness: zero memory leaks, sub-millisecond tail latency, and strict cryptographic audit guarantees.", type: "hacker" },
+      { text: "Client ownership: self-documenting code, intuitive dashboards, and runbooks that customer engineers love maintaining.", type: "diplomat" },
+      { text: "Platform generalization: every custom client adapter should be modularized to contribute back to core product IP.", type: "pioneer" }
+    ]
+  },
+  {
+    question: "What gives you the highest professional satisfaction at the end of an engagement?",
+    options: [
+      { text: "The client VP explicitly declaring that your platform saved their $10M initiative from disaster.", type: "diplomat" },
+      { text: "Solving a deep distributed systems bottleneck that stumped the client's internal engineering staff for 6 months.", type: "hacker" },
+      { text: "Shipping a high-velocity production system into the wild in 3 weeks that handles real mission-critical data.", type: "operator" },
+      { text: "Seeing a custom solution you engineered in the field get adopted as a flagship product feature across the entire company.", type: "pioneer" }
+    ]
+  }
+];
+
+const ARCHETYPE_PROFILES = {
+  hacker: {
+    title: "Deep Systems Hacker",
+    tagline: "The Low-Level Bastion Specialist",
+    description: "You thrive deep in Linux kernels, GPU memory paging, vector math, and air-gapped network tunnels. You turn cryptic error logs into triumphs and solve impossible infrastructure bottlenecks.",
+    recommendedTrack: "Palantir Foundry Core, Anduril Edge Defense, or Scale AI Infrastructure FDE."
+  },
+  diplomat: {
+    title: "Enterprise Client Diplomat",
+    tagline: "The High-Stakes Stakeholder Whisperer",
+    description: "You excel at building trust with resistant DBAs, aligning skeptical CISOs, and turning complex technical architectures into compelling executive value propositions.",
+    recommendedTrack: "OpenAI Enterprise Solutions, Databricks Strategic Accounts, or Ramp Enterprise FDE."
+  },
+  pioneer: {
+    title: "Product Platform Pioneer",
+    tagline: "The Field-to-Product Architecture Bridge",
+    description: "You don't just solve one client's problem—you spot universal patterns across messy enterprise data and author the reusable platform primitives that define company roadmap.",
+    recommendedTrack: "C3 AI Platform Engineering, Scale AI GenAI Tools, or Palantir AIP Builder."
+  },
+  operator: {
+    title: "High-Velocity Field Operator",
+    tagline: "The Rapid Deployment Firefighter",
+    description: "You are the special forces of software: high energy, fearless with ambiguity, and possessing an uncanny ability to ship production systems from hotel rooms in 48 hours.",
+    recommendedTrack: "Defense Tech Deployments, Frontier AI Red Teaming, or Series-B Enterprise AI FDE."
+  }
+};
+
+const ROLE_COMPARISON_DATA = [
+  {
+    dimension: "Primary Code Ownership",
+    fde: "100% Production code: writes custom adapters, ETL pipelines, on-prem container wrappers, and merges directly into core repos.",
+    swe: "100% Core platform: designs internal microservices, algorithms, and infrastructure shared across all SaaS customers.",
+    sa: "0-10% Code: writes occasional conceptual code snippets or Postman collections; primarily creates architectural diagrams.",
+    tam: "0% Code: analyzes bug tickets, logs, and release notes; liaises between customer IT and engineering."
+  },
+  {
+    dimension: "Client Interaction & Onsite %",
+    fde: "40% - 70% Direct client interaction: embedded onsite in client offices, joint war-rooms, and executive debriefs.",
+    swe: "0% - 5%: Isolated from customers; receives requirements via Product Managers and Jira tickets.",
+    sa: "60% - 80%: Pre-sales pitch meetings, RFP defense, and discovery workshops with prospective clients.",
+    tam: "80% - 90%: Weekly status check-ins, quarterly business reviews (QBRs), and escalation calls."
+  },
+  {
+    dimension: "Problem Ambiguity & Scope",
+    fde: "Extreme: client requirements are messy, legacy schemas lack documentation, and security constraints are non-negotiable.",
+    swe: "Low to Moderate: problems are decomposed into well-scoped epics and sprint stories with defined acceptance criteria.",
+    sa: "Moderate: scoped to feasibility studies, target architectures, and mutual success criteria.",
+    tam: "Low: scoped to operational SLA compliance, support ticket resolution times, and patch scheduling."
+  },
+  {
+    dimension: "Travel Expectation",
+    fde: "Moderate to High (20% - 50%): visits customer headquarters, secure facilities, and data centers for milestone deployments.",
+    swe: "Zero to Low (0% - 5%): remote or company HQ office only.",
+    sa: "Moderate to High (25% - 50%): travels for sales conferences and client pitch meetings.",
+    tam: "Low to Moderate (10% - 20%): travels primarily for relationship building and QBRs."
+  },
+  {
+    dimension: "Production Accountability",
+    fde: "Full End-to-End: if the customer deployment breaks at 2:00 AM during POC, the FDE owns the fix and client confidence.",
+    swe: "Rotational On-Call: shares pager duty for internal microservices with defined runbooks and team escalation.",
+    sa: "Pre-Sales only: transfers ownership to engineering and professional services once contract is signed.",
+    tam: "Ticket Routing: coordinates support response times but does not personally author hotfixes."
+  },
+  {
+    dimension: "Compensation & Equity",
+    fde: "$180k - $450k+ (High base salary + significant tech equity + deployment bonuses; mirrors Tier-1 SWE comp).",
+    swe: "$160k - $400k+ (Standard engineering salary + equity; performance tied to code review and sprint delivery).",
+    sa: "$150k - $300k (Commission / Sales OTE bonus tied to software deal closures and quotas).",
+    tam: "$110k - $190k (Base salary + customer retention / renewal bonus)."
+  }
+];
+
+const CAREER_LADDER_TIERS = [
+  {
+    id: "tier-l3",
+    level: "L3 / L4",
+    title: "Associate Forward Deployed Engineer",
+    comp: "$165,000 - $210,000 Total Comp",
+    equity: "Equity: $40k - $70k / yr",
+    tenure: "0 - 2 Years Experience",
+    summary: "Executes foundational deployment tasks, writes data ingestion adapters, builds Docker Compose local dev environments, and assists senior leads during client onboarding.",
+    competencies: [
+      "Mastery of enterprise SQL, Python data munging, and REST/gRPC protocols",
+      "Hands-on comfort with Docker packaging, bash scripting, and basic Linux troubleshooting",
+      "Client professional presence: taking structured meeting minutes, logging requirements accurately",
+      "Ability to debug client data discrepancies without making assumptions"
+    ],
+    promotionCriteria: "Independently ship an end-to-end customer ingestion pipeline that passes client QA with zero critical bugs."
+  },
+  {
+    id: "tier-l5",
+    level: "L5",
+    title: "Senior Forward Deployed Engineer",
+    comp: "$220,000 - $325,000 Total Comp",
+    equity: "Equity: $90k - $150k / yr",
+    tenure: "3 - 5 Years Experience",
+    summary: "Owns entire customer deployments from Day 1 to Day 30 sign-off. Navigates hostile client IT environments, designs air-gap topologies, and translates customer feedback into core platform features.",
+    competencies: [
+      "Deep expertise in air-gapped container topologies, Kubernetes (K3s/Helm), and GPU model serving (vLLM)",
+      "High emotional intelligence: de-escalating DBA panic, building trust with CISOs and InfoSec leads",
+      "Writing production-grade glue code with distributed idempotency, retries, and tamper-evident audit trails",
+      "Mentoring Associate FDEs and establishing reusable field deployment playbooks"
+    ],
+    promotionCriteria: "Successfully lead multiple $1M+ ARR enterprise proofs of concept to customer executive sign-off."
+  },
+  {
+    id: "tier-l6",
+    level: "L6",
+    title: "Staff Forward Deployed Engineer",
+    comp: "$330,000 - $475,000 Total Comp",
+    equity: "Equity: $160k - $240k / yr",
+    tenure: "5 - 8 Years Experience",
+    summary: "The definitive technical authority on customer architecture. Leads multi-engineer field teams on mission-critical client deployments (e.g. Pentagon, global banking consortia, tier-1 health systems).",
+    competencies: [
+      "Architecting enterprise zero-trust systems, cross-cloud topologies, and custom CDC pipelines",
+      "Direct C-level diplomacy: presenting technical strategy to Fortune 100 CIOs and government agency directors",
+      "Authoring major platform core modules derived from recurring client field patterns",
+      "Interviewing, bar-raising, and defining engineering standards across the forward deployed organization"
+    ],
+    promotionCriteria: "Pioneer new deployment methodologies that compress company-wide POC cycle times by 30%+."
+  },
+  {
+    id: "tier-l7",
+    level: "L7+",
+    title: "Principal FDE / Field Director",
+    comp: "$480,000 - $750,000+ Total Comp",
+    equity: "Equity: $280k - $450k+ / yr",
+    tenure: "8+ Years Experience",
+    summary: "Shapes company strategy at the intersection of product roadmap and market enterprise demand. Advises the CEO and Head of Product on high-stakes customer bets and strategic accounts.",
+    competencies: [
+      "Executive sponsorship on $10M+ multi-year enterprise contracts",
+      "Strategic foresight: identifying emerging market gaps in on-prem AI, regulatory compliance, and data governance",
+      "Cross-organizational leadership spanning Engineering, Product, Legal, and Go-To-Market",
+      "Cultivating the organizational culture of ruthless velocity, customer empathy, and engineering rigor"
+    ],
+    promotionCriteria: "Drive company-defining technical partnerships and enterprise expansion impacting tens of millions in ARR."
+  }
+];
+
+// ============================================================================
 // 2. OFFLINE PERSISTENCE: INDEXEDDB WITH LOCALSTORAGE FALLBACK
 // ============================================================================
 class OfflineStorageManager {
@@ -883,11 +1125,19 @@ const storage = new OfflineStorageManager();
 // ============================================================================
 const AppState = {
   catalog: DEFAULT_CATALOG,
-  activeSection: "skills",
+  activeSection: "overview",
   activeTrackFilter: "all",
   searchQuery: "",
   
-  // Section 1
+  // Section 0: Overview & Careers
+  selectedTimeSlot: "slot-0830",
+  archetypeAnswers: {},
+  archetypeScores: { hacker: 0, diplomat: 0, pioneer: 0, operator: 0 },
+  archetypeCompleted: false,
+  matrixHighlightedCol: "all",
+  selectedCareerTier: "tier-l5",
+
+  // Section 1: Learning Skills
   selectedModule: null,
   modulesProgress: {}, // { moduleId: { mastered: bool, checkpoints: [] } }
 
@@ -958,7 +1208,10 @@ function initPWA() {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js")
-        .then((reg) => console.log("[PWA] Service Worker registered:", reg.scope))
+        .then((reg) => {
+          console.log("[PWA] Service Worker registered:", reg.scope);
+          reg.update();
+        })
         .catch((err) => console.warn("[PWA] Service Worker registration failed:", err));
     });
   }
@@ -1084,6 +1337,14 @@ async function initAppData() {
     AppState.flashcardStats[fc.id] = fc;
   });
 
+  // Load saved archetype quiz if any
+  const savedArchetype = await storage.get("meta", "archetype");
+  if (savedArchetype) {
+    AppState.archetypeAnswers = savedArchetype.answers || {};
+    AppState.archetypeScores = savedArchetype.scores || { hacker: 0, diplomat: 0, pioneer: 0, operator: 0 };
+    AppState.archetypeCompleted = savedArchetype.completed || false;
+  }
+
   // Initialize Flashcard list
   AppState.flashcardsList = [...AppState.catalog.flashcards];
 
@@ -1097,6 +1358,7 @@ async function initAppData() {
 }
 
 function renderAllViews() {
+  renderOverviewSection();
   renderModulesGrid();
   renderFlashcards();
   renderPuzzles();
@@ -1109,6 +1371,288 @@ function renderAllViews() {
   renderSnippets();
   updateReadinessMetrics();
 }
+
+// ============================================================================
+// SECTION 0: FDE CAREERS & OVERVIEW
+// ============================================================================
+function renderOverviewSection() {
+  renderTimelineScrubber();
+  renderTimelineDetail();
+  renderArchetypeQuiz();
+  renderRoleMatrix();
+  renderCareerLadder();
+}
+
+// --- 0A: Day-in-the-Life Simulator ---
+function renderTimelineScrubber() {
+  const container = document.getElementById("timeline-scrubber-container");
+  if (!container) return;
+
+  container.innerHTML = DAY_IN_LIFE_SLOTS.map((slot) => {
+    const isActive = AppState.selectedTimeSlot === slot.id;
+    return `
+      <button class="timeline-slot-btn ${isActive ? 'active' : ''}" onclick="selectDayTimeSlot('${slot.id}')">
+        <span class="timeline-time">${slot.time}</span>
+        <span class="timeline-label">${slot.badge}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function selectDayTimeSlot(slotId) {
+  AppState.selectedTimeSlot = slotId;
+  renderTimelineScrubber();
+  renderTimelineDetail();
+}
+window.selectDayTimeSlot = selectDayTimeSlot;
+
+function renderTimelineDetail() {
+  const container = document.getElementById("timeline-detail-content");
+  if (!container) return;
+
+  const slot = DAY_IN_LIFE_SLOTS.find(s => s.id === AppState.selectedTimeSlot) || DAY_IN_LIFE_SLOTS[0];
+  if (!slot) return;
+
+  container.innerHTML = `
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span class="tag-badge font-mono" style="color: var(--accent-cyan); font-weight: 700;">${slot.time} · ${slot.badge}</span>
+        <span style="font-size: 0.78rem; color: var(--text-subtle);">Client Bastion Session</span>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.6rem;">${slot.title}</h3>
+      <p style="font-size: 0.92rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem;">${slot.situation}</p>
+    </div>
+
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 0.4rem;">
+        Production Command / Code Executed:
+      </div>
+      <pre style="background: #030508; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.85rem; font-family: var(--font-mono); font-size: 0.82rem; color: #67e8f9; overflow-x: auto;"><code>${escapeHtml(slot.commandSnippet)}</code></pre>
+    </div>
+
+    <div style="background: rgba(6, 182, 212, 0.08); border-left: 3px solid var(--accent-cyan); padding: 0.85rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+      <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 0.2rem;">
+        Field Reality Check
+      </div>
+      <div style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.5;">
+        ${slot.fieldRealityCheck}
+      </div>
+    </div>
+  `;
+}
+
+// --- 0B: FDE Career Archetype Quiz ---
+function renderArchetypeQuiz() {
+  const container = document.getElementById("archetype-quiz-body");
+  if (!container) return;
+
+  if (AppState.archetypeCompleted) {
+    // Show results
+    const scores = AppState.archetypeScores;
+    let winningType = "hacker";
+    let maxScore = -1;
+    for (const [type, score] of Object.entries(scores)) {
+      if (score > maxScore) {
+        maxScore = score;
+        winningType = type;
+      }
+    }
+    const profile = ARCHETYPE_PROFILES[winningType];
+    const totalVotes = Math.max(1, Object.values(scores).reduce((a, b) => a + b, 0));
+
+    container.innerHTML = `
+      <div class="archetype-result-box">
+        <span class="tag-badge" style="color: var(--accent-cyan); font-weight: 700;">Diagnostic Result</span>
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin: 0.4rem 0 0.2rem 0;">${profile.title}</h3>
+        <div style="font-size: 0.82rem; color: var(--accent-indigo); font-weight: 600; margin-bottom: 0.75rem;">${profile.tagline}</div>
+        <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 1rem;">${profile.description}</p>
+        
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Matched Company Tracks:</div>
+          <div style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 600; margin-top: 0.2rem;">${profile.recommendedTrack}</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem;">
+          ${Object.entries(ARCHETYPE_PROFILES).map(([key, p]) => {
+            const pct = Math.round(((scores[key] || 0) / totalVotes) * 100);
+            return `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.15rem;">
+                  <span>${p.title}</span>
+                  <span class="font-mono">${pct}%</span>
+                </div>
+                <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
+                  <div style="width: ${pct}%; height: 100%; background: ${key === winningType ? 'var(--accent-cyan)' : 'var(--accent-indigo)'};"></div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="width: 100%;" onclick="retakeArchetypeQuiz()">Retake Diagnostic</button>
+      </div>
+    `;
+    return;
+  }
+
+  // Find next unanswered question
+  const currentIdx = Object.keys(AppState.archetypeAnswers).length;
+  if (currentIdx >= ARCHETYPE_QUESTIONS.length) {
+    AppState.archetypeCompleted = true;
+    renderArchetypeQuiz();
+    return;
+  }
+
+  const q = ARCHETYPE_QUESTIONS[currentIdx];
+  container.innerHTML = `
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+        <span class="tag-badge" style="color: var(--accent-indigo)">Question ${currentIdx + 1} of ${ARCHETYPE_QUESTIONS.length}</span>
+        <span style="font-size: 0.75rem; color: var(--text-subtle);">Real Scenarios</span>
+      </div>
+      <p style="font-size: 0.88rem; font-weight: 600; color: #fff; line-height: 1.5; margin-bottom: 0.85rem;">${q.question}</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        ${q.options.map((opt, oIdx) => `
+          <div class="quiz-option-card" onclick="selectArchetypeChoice(${currentIdx}, ${oIdx})">
+            <span>${opt.text}</span>
+            <span style="color: var(--text-subtle); font-size: 0.8rem;">➔</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+async function selectArchetypeChoice(qIdx, optionIdx) {
+  const q = ARCHETYPE_QUESTIONS[qIdx];
+  if (!q) return;
+  const choice = q.options[optionIdx];
+  if (!choice) return;
+
+  AppState.archetypeAnswers[qIdx] = optionIdx;
+  AppState.archetypeScores[choice.type] = (AppState.archetypeScores[choice.type] || 0) + 1;
+
+  if (Object.keys(AppState.archetypeAnswers).length >= ARCHETYPE_QUESTIONS.length) {
+    AppState.archetypeCompleted = true;
+    showToast("🎉 Archetype Diagnostic Completed!");
+  }
+
+  await storage.set("meta", {
+    id: "archetype",
+    answers: AppState.archetypeAnswers,
+    scores: AppState.archetypeScores,
+    completed: AppState.archetypeCompleted
+  });
+
+  renderArchetypeQuiz();
+}
+window.selectArchetypeChoice = selectArchetypeChoice;
+
+async function retakeArchetypeQuiz() {
+  AppState.archetypeAnswers = {};
+  AppState.archetypeScores = { hacker: 0, diplomat: 0, pioneer: 0, operator: 0 };
+  AppState.archetypeCompleted = false;
+  await storage.delete("meta", "archetype");
+  renderArchetypeQuiz();
+  showToast("Diagnostic reset.");
+}
+window.retakeArchetypeQuiz = retakeArchetypeQuiz;
+
+// --- 0C: Role Comparison Matrix ---
+function renderRoleMatrix() {
+  const tbody = document.getElementById("role-matrix-tbody");
+  if (!tbody) return;
+
+  const hl = AppState.matrixHighlightedCol;
+
+  // Update header highlight classes
+  document.getElementById("col-head-fde")?.classList.toggle("highlight-col", hl === "all" || hl === "fde");
+  document.getElementById("col-head-swe")?.classList.toggle("highlight-col", hl === "swe");
+  document.getElementById("col-head-sa")?.classList.toggle("highlight-col", hl === "sa");
+  document.getElementById("col-head-tam")?.classList.toggle("highlight-col", hl === "tam");
+
+  tbody.innerHTML = ROLE_COMPARISON_DATA.map((row) => `
+    <tr>
+      <td style="font-weight: 700; color: #fff;">${row.dimension}</td>
+      <td class="${hl === 'all' || hl === 'fde' ? 'highlight-col' : ''}">${row.fde}</td>
+      <td class="${hl === 'swe' ? 'highlight-col' : ''}">${row.swe}</td>
+      <td class="${hl === 'sa' ? 'highlight-col' : ''}">${row.sa}</td>
+      <td class="${hl === 'tam' ? 'highlight-col' : ''}">${row.tam}</td>
+    </tr>
+  `).join("");
+}
+
+function highlightMatrixCol(colId) {
+  AppState.matrixHighlightedCol = colId;
+  renderRoleMatrix();
+}
+window.highlightMatrixCol = highlightMatrixCol;
+
+// --- 0D: Career Progression Ladder ---
+function renderCareerLadder() {
+  const tabsContainer = document.getElementById("ladder-tier-tabs-container");
+  const detailContainer = document.getElementById("ladder-detail-content");
+  if (!tabsContainer || !detailContainer) return;
+
+  tabsContainer.innerHTML = CAREER_LADDER_TIERS.map(tier => {
+    const isActive = AppState.selectedCareerTier === tier.id;
+    return `
+      <button class="ladder-tier-btn ${isActive ? 'active' : ''}" onclick="selectCareerTier('${tier.id}')">
+        <span>${tier.level}</span> · <span>${tier.title}</span>
+      </button>
+    `;
+  }).join("");
+
+  const activeTier = CAREER_LADDER_TIERS.find(t => t.id === AppState.selectedCareerTier) || CAREER_LADDER_TIERS[1];
+  if (!activeTier) return;
+
+  detailContainer.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <span class="tag-badge" style="color: var(--accent-emerald); font-weight: 700;">${activeTier.level} · ${activeTier.tenure}</span>
+          <h3 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-top: 0.35rem;">${activeTier.title}</h3>
+          <p style="font-size: 0.92rem; color: #cbd5e1; margin-top: 0.35rem; max-width: 800px; line-height: 1.6;">${activeTier.summary}</p>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; text-align: right;">
+          <div style="font-size: 1.2rem; font-weight: 800; color: #6ee7b7;">${activeTier.comp}</div>
+          <div style="font-size: 0.8rem; color: #a7f3d0; margin-top: 0.15rem;">${activeTier.equity}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 0.75rem;">
+            Core Field Competencies:
+          </h4>
+          <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+            ${activeTier.competencies.map(c => `<li>${c}</li>`).join("")}
+          </ul>
+        </div>
+
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--accent-emerald); text-transform: uppercase; margin-bottom: 0.75rem;">
+            Promotion & Impact Rubric:
+          </h4>
+          <p style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin-bottom: 0.85rem;">
+            ${activeTier.promotionCriteria}
+          </p>
+          <div style="font-size: 0.78rem; color: var(--text-subtle);">
+            Targeted at forward-deployed engineering organizations (e.g. Palantir, Scale AI, OpenAI, Databricks, Anduril).
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function selectCareerTier(tierId) {
+  AppState.selectedCareerTier = tierId;
+  renderCareerLadder();
+}
+window.selectCareerTier = selectCareerTier;
 
 // ============================================================================
 // 7. SECTION 1: LEARNING FDE SKILLS
@@ -2367,9 +2911,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Brand click -> Section 1
+  // Brand click -> Section 0 (Overview)
   document.getElementById("brand-home-btn")?.addEventListener("click", () => {
-    switchSection("skills");
+    switchSection("overview");
   });
 
   // Track filter chips
@@ -2489,7 +3033,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // iOS Guide Modal
   document.getElementById("close-ios-guide-btn")?.addEventListener("click", () => closeModal("ios-guide-modal"));
 
-  // Global Keyboard Shortcuts
+  // Global Keyboard Shortcuts (1-5 for 5 tabs)
   window.addEventListener("keydown", (e) => {
     // Escape closes modals
     if (e.key === "Escape") {
@@ -2502,10 +3046,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (e.key === "1") switchSection("skills");
-    else if (e.key === "2") switchSection("interviews");
-    else if (e.key === "3") switchSection("jobhunting");
-    else if (e.key === "4") switchSection("accelerator");
+    if (e.key === "1") switchSection("overview");
+    else if (e.key === "2") switchSection("skills");
+    else if (e.key === "3") switchSection("interviews");
+    else if (e.key === "4") switchSection("jobhunting");
+    else if (e.key === "5") switchSection("accelerator");
     else if (e.key === "/") {
       e.preventDefault();
       searchInput?.focus();
