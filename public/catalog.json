@@ -234,6 +234,110 @@
         "answerIndex": 1,
         "explanation": "Hash chaining (like a Merkle chain or git commit history) ensures that if any past record is modified or deleted, the subsequent hashes will fail verification immediately."
       }
+    },
+    {
+      "id": "mod-palantir-ontology",
+      "trackId": "solution-architecture",
+      "title": "Palantir AIP & Enterprise Ontology Modeling (OSDK)",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 55,
+      "tags": ["Palantir", "Foundry", "Ontology", "OSDK", "Action-Types", "Writeback"],
+      "summary": "Model complex enterprise legacy data into kinetic Palantir-style Ontologies with Object Types, Link Types, Action Types, and validated writeback pipelines.",
+      "content": "### The Power of an Enterprise Ontology\n\nIn conventional data architectures, applications query raw tables or views (`patients`, `encounters`, `claims`). In a modern enterprise Forward Deployed environment (such as Palantir Foundry / AIP), data is transformed into a **Kinetic Ontology** — a real-time semantic layer connecting data objects, relations, and operational actions.\n\n#### The 4 Core Primitives\n1. **Object Types**: Business entities with typed properties and primary keys (e.g., `Flight`, `AircraftTail`, `HospitalPatient`).\n2. **Link Types**: First-class bidirectional relationships (e.g., `HospitalPatient` 1:N `ClinicalEncounter`, `AircraftTail` 1:1 `AssignedPilot`).\n3. **Action Types**: Declarative business mutations with validation gates and audit trails (e.g., `ScheduleMaintenance`, `DischargePatient`, `RerouteFlight`).\n4. **Writeback Handlers**: Safe synchronizers that push action mutations back into legacy transactional systems (SAP, Oracle, Epic) or event streams with transactional rollback.\n\n```typescript\n// Example: TypeScript OSDK Action Definition with Validation Gate\nimport { ActionDefinition, ActionValidationResult } from '@osdk/api';\n\nexport const ScheduleEmergencyICUBed: ActionDefinition = {\n  apiName: 'scheduleEmergencyIcuBed',\n  parameters: {\n    patientId: { type: 'string', required: true },\n    targetWardId: { type: 'string', required: true },\n    justification: { type: 'string', required: true }\n  },\n  validate: async (ctx, params): Promise<ActionValidationResult> => {\n    const ward = await ctx.ontology.objects.HospitalWard.get(params.targetWardId);\n    if (ward.availableBeds <= 0) {\n      return { valid: false, reason: 'No ICU beds currently available in selected ward.' };\n    }\n    return { valid: true };\n  },\n  execute: async (ctx, params) => {\n    // Mutates ontology object & fires audit event\n    await ctx.ontology.actions.assignBed({\n      patientId: params.patientId,\n      wardId: params.targetWardId,\n      assignedAt: new Date().toISOString()\n    });\n    // Pushes asynchronous writeback to hospital core EHR\n    await ctx.services.ehrConnector.dispatchBedUpdate(params.patientId, params.targetWardId);\n  }\n};\n```\n\n#### Field Checklist for FDEs\n- [ ] Map all primary keys to immutable surrogate identifiers (UUIDv4 or canonical composite hashes).\n- [ ] Ensure all Action Types define pre-condition validation rules before committing mutations.\n- [ ] Set up automated writeback reconciliation monitors that alert on sync drift between the Ontology and underlying source databases.",
+      "checkpoints": [
+        "Modeled Object Types and Link Types with bidirectional navigation",
+        "Configured Action Type validation gates preventing invalid operational states",
+        "Built resilient writeback adapters with compensatory transaction rollbacks"
+      ],
+      "quiz": {
+        "question": "In a Palantir-style Ontology architecture, what is the primary role of an 'Action Type'?",
+        "options": [
+          "It executes raw SQL DROP TABLE statements on the production database",
+          "It encapsulates a business mutation with pre-condition validation, permission checks, audit logging, and legacy writeback",
+          "It replaces the React frontend with a command-line script",
+          "It automatically encrypts the developer's laptop hard drive"
+        ],
+        "answerIndex": 1,
+        "explanation": "Action Types turn read-only analytical data into an operational decision platform by bundling validation, authorization, audit logging, and writeback into a single atomic primitive."
+      }
+    },
+    {
+      "id": "mod-airgap-llm-serving",
+      "trackId": "ai-ml-fundamentals",
+      "title": "Air-Gapped & Sovereign LLM Serving (vLLM & AWQ)",
+      "difficulty": "Advanced",
+      "estimatedMinutes": 50,
+      "tags": ["vLLM", "AWQ-Quantization", "Air-Gap", "Offline-Inference", "GPU-VRAM"],
+      "summary": "Package, size, and serve quantized 70B parameter models on disconnected multi-GPU nodes with PagedAttention and zero outbound telemetry.",
+      "content": "### Disconnected Inference in Secure Bastions\n\nWhen deploying frontier AI into classified defense bunkers, intelligence enclaves, or private banking vaults, cloud APIs (OpenAI, Anthropic, Bedrock) are strictly forbidden. FDEs must deploy open-weights models (e.g. Llama-3-70B, Mistral Large, Qwen) completely offline.\n\n#### VRAM Budgeting & Quantization Arithmetic\n1. **Model Weights VRAM**:\n   - 16-bit FP16: `70 * 2 = 140 GB` (requires 2x NVIDIA A100 80GB or 4x RTX 6000 Ada 48GB).\n   - 4-bit AWQ / GPTQ: `70 * 0.55 = ~38.5 GB` (fits into a single NVIDIA A100 80GB or 2x 24GB RTX 4090s!).\n2. **KV Cache Calculation**:\n   - Grouped-Query Attention (GQA) dramatically reduces KV memory: `KV_Bytes = 2 * layers * kv_heads * head_dim * bytes_per_element * context_len * batch_size`.\n3. **vLLM PagedAttention Deployment Configuration**:\n   - Disable telemetry: set `VLLM_NO_USAGE_STATS=1`.\n   - Enforce offline Hugging Face cache: `HF_HUB_OFFLINE=1`.\n\n```yaml\n# Air-Gapped Docker Compose Manifest for vLLM\nversion: '3.8'\nservices:\n  vllm-engine:\n    image: internal-harbor.local/fde/vllm:v0.4.2\n    container_name: fde-vllm-airgap\n    restart: always\n    environment:\n      - HF_HUB_OFFLINE=1\n      - VLLM_NO_USAGE_STATS=1\n      - CUDA_VISIBLE_DEVICES=0,1\n    volumes:\n      - /data/airgap_models/Meta-Llama-3-70B-Instruct-AWQ:/model:ro\n    ports:\n      - \"127.0.0.1:8000:8000\"\n    deploy:\n      resources:\n        reservations:\n          devices:\n            - driver: nvidia\n              count: 2\n              capabilities: [gpu]\n    command: >\n      --model /model\n      --quantization awq\n      --tensor-parallel-size 2\n      --max-model-len 8192\n      --gpu-memory-utilization 0.90\n      --enforce-eager\n```\n\n#### Field Checklist for FDEs\n- [ ] Pre-compile Triton and CUDA kernel caches offsite to prevent 15-minute warmup delays during on-prem startup.\n- [ ] Verify `sha256sum` on all `.safetensors` model chunks before initiating model load.\n- [ ] Restrict vLLM HTTP listener to internal bridge network (`127.0.0.1` or internal Docker network).",
+      "checkpoints": [
+        "Calculated precise VRAM allocation across weights, activation memory, and KV cache",
+        "Configured AWQ 4-bit tensor-parallel container topology with zero outbound traffic",
+        "Benchmarked concurrent time-to-first-token (TTFT) and throughput under simulated load"
+      ],
+      "quiz": {
+        "question": "Why is setting HF_HUB_OFFLINE=1 and VLLM_NO_USAGE_STATS=1 critical in air-gapped defense or hospital environments?",
+        "options": [
+          "It makes the GPU fans spin in reverse to save power",
+          "It prevents containers from attempting external telemetry connections that trigger security firewall alerts and connection timeouts",
+          "It reduces token generation cost to zero dollars",
+          "It enables automatic dark mode on the client's monitor"
+        ],
+        "answerIndex": 1,
+        "explanation": "Default open-source ML libraries often attempt to phone home to verify hub releases or send anonymous telemetry. In an air-gap, these outbound attempts hang sockets or trigger automated InfoSec intrusion detection systems."
+      }
+    },
+    {
+      "id": "mod-streaming-cdc-kafka",
+      "trackId": "core-tech-stack",
+      "title": "Enterprise CDC, Debezium & Real-Time Schemas",
+      "difficulty": "Advanced",
+      "estimatedMinutes": 50,
+      "tags": ["CDC", "Debezium", "Kafka", "Schema-Registry", "Avro", "ClickHouse"],
+      "summary": "Extract low-latency database mutations from legacy transactional systems without table locking using write-ahead log replication.",
+      "content": "### Non-Invasive Data Extraction via Change Data Capture (CDC)\n\nIn enterprise engagements, client DBAs will vehemently refuse permission to run recurring periodic SQL extraction queries (`SELECT * FROM orders WHERE updated_at > ...`) against their transactional systems due to table locks and CPU degradation.\n\nThe industry standard solution is **Log-Based Change Data Capture (CDC)** using Debezium over the database's write-ahead transaction log (WAL / Oplog / Redo Log).\n\n#### Why Log-Based CDC Wins\n1. **Zero Table Locks**: Reads internal binary logs sequentially from disk without holding locks on operational tables.\n2. **Captures Deletes & Intermediary States**: Periodic polling misses rows that were updated and deleted between poll intervals; CDC captures every atomic state transition.\n3. **Sub-Second Latency**: Mutations are streamed to Apache Kafka or Redpanda within <100 milliseconds of commit.\n\n```json\n// Debezium Postgres CDC Connector Configuration\n{\n  \"name\": \"fde-core-banking-cdc\",\n  \"config\": {\n    \"connector.class\": \"io.debezium.connector.postgresql.PostgresConnector\",\n    \"tasks.max\": \"1\",\n    \"plugin.name\": \"pgoutput\",\n    \"database.hostname\": \"core-db.internal\",\n    \"database.port\": \"5432\",\n    \"database.user\": \"debezium_repl\",\n    \"database.password\": \"${vault:cdc_password}\",\n    \"database.dbname\": \"banking_prod\",\n    \"database.server.name\": \"fintech_prod\",\n    \"table.include.list\": \"public.accounts,public.transactions\",\n    \"tombstones.on.delete\": \"false\",\n    \"key.converter\": \"io.confluent.connect.avro.AvroConverter\",\n    \"value.converter\": \"io.confluent.connect.avro.AvroConverter\",\n    \"key.converter.schema.registry.url\": \"http://schema-registry:8081\",\n    \"value.converter.schema.registry.url\": \"http://schema-registry:8081\"\n  }\n}\n```\n\n#### Handling Schema Drift with Avro & Schema Registry\nEnterprise clients change database columns without warning. Using Confluent Schema Registry with **FULL_TRANSITIVE** compatibility ensures downstream consumers gracefully ignore new nullable fields or use defaults without breaking pipelines.",
+      "checkpoints": [
+        "Configured non-locking WAL logical replication slot with read-only user permissions",
+        "Set up Avro schema serialization with backward and forward compatibility rules",
+        "Constructed dead-letter queue (DLQ) routing for malformed CDC events"
+      ],
+      "quiz": {
+        "question": "Why is log-based CDC via Debezium preferred over polling queries (SELECT * WHERE updated_at > ?) on legacy client databases?",
+        "options": [
+          "Polling queries require the database to be converted to MongoDB first",
+          "Log-based CDC reads the write-ahead log with zero table locks, captures hard deletes, and streams events in sub-second latency",
+          "CDC queries are written in CSS instead of SQL",
+          "Polling queries require internet access while CDC works via Bluetooth"
+        ],
+        "answerIndex": 1,
+        "explanation": "CDC reads binary transaction logs directly, avoiding table scans, locks, and missed intermediate row mutations."
+      }
+    },
+    {
+      "id": "mod-llm-eval-rag-triad",
+      "trackId": "ai-ml-fundamentals",
+      "title": "Enterprise LLM Evaluation & The RAG Triad",
+      "difficulty": "Mission-Critical",
+      "estimatedMinutes": 45,
+      "tags": ["Evaluation", "RAG-Triad", "Faithfulness", "Ragas", "LLM-as-Judge"],
+      "summary": "Construct automated CI/CD evaluation harnesses measuring Context Precision, Faithfulness/Groundedness, and Answer Relevance before production rollout.",
+      "content": "### Moving Past 'Vibe-Based' Evaluation\n\nAmateur developers test AI prompts by eye in a web UI. Enterprise Forward Deployed Engineers implement automated, metric-driven evaluation pipelines using the **RAG Triad** to prevent hallucinations in mission-critical deployments.\n\n#### The RAG Triad Metrics\n1. **Context Relevance (Retrieval Precision)**: Are the retrieved text chunks strictly relevant to the user query, or is the context window flooded with noisy irrelevance?\n2. **Groundedness / Faithfulness (Hallucination Detector)**: Is every factual claim in the generated output mathematically supported by the retrieved context, or did the model invent facts?\n3. **Answer Relevance**: Does the generated answer directly address the user's explicit question without meandering into tangential commentary?\n\n```python\n# Automated RAG Triad Evaluation Harness with LLM-as-a-Judge\nfrom ragas import evaluate\nfrom ragas.metrics import (\n    faithfulness,\n    answer_relevancy,\n    context_precision,\n    context_recall\n)\nfrom datasets import Dataset\n\n# Enterprise Evaluation Gold Dataset\neval_data = {\n    'question': [\"What is the maximum allowable backpressure delay for core payment events?\"],\n    'contexts': [[\"Section 4.2: Payment event queues apply token-bucket rate limiting with a hard timeout cap of 250ms before routing to DLQ.\"]],\n    'answer': [\"The maximum allowable backpressure delay is 250ms, after which events are routed to the Dead Letter Queue.\"],\n    'ground_truth': [\"250ms before dead letter queue routing\"]\n}\n\ndataset = Dataset.from_dict(eval_data)\nresults = evaluate(\n    dataset,\n    metrics=[faithfulness, answer_relevancy, context_precision, context_recall]\n)\n\nprint(f\"Faithfulness Score: {results['faithfulness']:.4f}\")\nprint(f\"Answer Relevancy: {results['answer_relevancy']:.4f}\")\nassert results['faithfulness'] >= 0.95, \"Deployment Rejected: Faithfulness score below SLA threshold!\"\n```\n\n#### Field Checklist for FDEs\n- [ ] Require a minimum 50-sample enterprise ground truth test set signed off by client domain experts.\n- [ ] Embed automated evaluation thresholds into Git pre-merge hooks and deployment gates.\n- [ ] Track metric drift continuously across weekly client updates.",
+      "checkpoints": [
+        "Constructed synthetic ground truth QA test sets from customer documentation",
+        "Implemented automated faithfulness and context relevance scoring pipelines",
+        "Established CI/CD deployment gates blocking models with hallucination scores > 5%"
+      ],
+      "quiz": {
+        "question": "If an LLM outputs an answer that sounds plausible and answers the user's question, but references facts never found in the retrieved source documents, which RAG Triad metric failed?",
+        "options": [
+          "Context Precision",
+          "Faithfulness (Groundedness)",
+          "TCP Handshake Window",
+          "CSS Line-Height"
+        ],
+        "answerIndex": 1,
+        "explanation": "Faithfulness measures whether the response is strictly grounded in and entailed by the retrieved source context. When facts are generated from pre-trained memory rather than source documents, faithfulness fails."
+      }
     }
   ],
   "flashcards": [
@@ -407,6 +511,104 @@
               "label": "Proxy API calls to a public commercial AI endpoint using personal API keys.",
               "score": 0,
               "feedback": "Disastrous! Air-gapped datacenters block outbound requests, and submitting hospital clinical text to public APIs is an immediate contract termination breach."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scenario-fintech-cdc",
+      "title": "Real-Time CDC & Fraud Ontology for Tier-1 Commercial Bank",
+      "client": "Global Commercial Bank (Core Banking Group)",
+      "challenge": "The customer's core banking runs on a mainframe DB2 database with overnight batch balance reconciliation. Fraud detection teams cannot detect fraudulent withdrawals until 24 hours later. The VP of Risk mandates sub-second fraud alerts without impacting the core transaction ledger.",
+      "stages": [
+        {
+          "stageNumber": 1,
+          "title": "Non-Invasive Ingestion & Zero-Lock CDC",
+          "prompt": "The lead mainframe DBA refuses periodic SQL SELECT queries because of table locking. How do you capture transactions continuously?",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Deploy Debezium CDC reading the write-ahead recovery log (WAL/redo log) with a read-only replication privilege, streaming raw mutations into Apache Kafka with Avro serialization.",
+              "score": 100,
+              "feedback": "Flawless! Log-based CDC bypasses query locks completely and guarantees sub-100ms event delivery."
+            },
+            {
+              "id": "b",
+              "label": "Trigger a full database mysqldump/pg_dump every 5 minutes to an S3 bucket.",
+              "score": 0,
+              "feedback": "Fatal mistake: continuous dumps cause severe disk I/O thrashing and will freeze core banking transactions."
+            },
+            {
+              "id": "c",
+              "label": "Inject an HTTP webhook directly into the 20-year-old COBOL transaction processing routine.",
+              "score": 15,
+              "feedback": "High risk: modifying core banking COBOL code introduces catastrophic regression risk and requires a 9-month audit cycle."
+            }
+          ]
+        },
+        {
+          "stageNumber": 2,
+          "title": "Streaming Analytics & Fast Inference SLA",
+          "prompt": "Incoming transactions spike to 18,000 events/sec during Black Friday. Fraud scores must be calculated within <80ms. How do you architect the serving layer?",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Sink Kafka events into ClickHouse with Materialized Views for rolling window aggregations, evaluated by a containerized XGBoost microservice over gRPC.",
+              "score": 100,
+              "feedback": "Industry standard: ClickHouse handles 100k+ inserts/sec effortlessly while gRPC keeps microservice inference well under 25ms."
+            },
+            {
+              "id": "b",
+              "label": "Write all events to a single SQLite file and run a Python for-loop.",
+              "score": 0,
+              "feedback": "SQLite will lock on write concurrency immediately under 18k events/sec."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scenario-defense-airgap",
+      "title": "Multi-Modal Avionics Intelligence in a Classified Air-Gapped Depot",
+      "client": "Aerospace Logistics & Maintenance Command",
+      "challenge": "1.5 million legacy scanned maintenance PDFs and sensor logs are siloed inside an underground bunker with zero internet connectivity. Field technicians need natural-language troubleshooting assistance to locate wiring schematics in under 3 seconds.",
+      "stages": [
+        {
+          "stageNumber": 1,
+          "title": "Air-Gap Media Transfer & Cryptographic Integrity",
+          "prompt": "How do you securely transport model weights, container images, and software updates into the classified facility?",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Export pre-tested Docker tarballs and AWQ model weights onto client-accredited encrypted physical drives, verifying SHA-256 checksums at the air-gap hardware gate before importing to internal Harbor registry.",
+              "score": 100,
+              "feedback": "Exemplary defense deployment protocol: strict hash verification prevents corrupted binaries and complies with security accreditation."
+            },
+            {
+              "id": "b",
+              "label": "Tether a mobile 5G hotspot under your desk to download Hugging Face packages.",
+              "score": 0,
+              "feedback": "Severe security violation: bringing unauthorized wireless transmitters into a secure facility is an espionage breach and causes immediate arrest."
+            }
+          ]
+        },
+        {
+          "stageNumber": 2,
+          "title": "Offline Multi-Modal Search & Vector Indexing",
+          "prompt": "The PDF schematics contain complex technical diagrams and OCR scans. What indexing topology yields accurate pinpointing without cloud APIs?",
+          "choices": [
+            {
+              "id": "a",
+              "label": "Process PDFs via local PaddleOCR/Tesseract containers, generate dense embeddings using on-prem BAAI/BGE models, and index into an air-gapped Qdrant vector cluster with reciprocal rank fusion (RRF).",
+              "score": 100,
+              "feedback": "Top-tier architecture: local OCR + dense embeddings + RRF delivers 92%+ pinpoint accuracy entirely within the offline perimeter."
+            },
+            {
+              "id": "b",
+              "label": "Rely solely on naive SQL LIKE '%wire%' queries against unparsed file names.",
+              "score": 10,
+              "feedback": "Unusable: fails to extract text from scanned images and cannot match semantic synonyms like 'hydraulic pressure drop' vs 'actuator leak'."
             }
           ]
         }

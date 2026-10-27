@@ -1,9 +1,9 @@
-const CACHE_NAME = 'fde-mastery-v2';
+const CACHE_NAME = 'fde-mastery-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/main.css?v=2',
-  '/app.js?v=2',
+  '/main.css?v=3',
+  '/app.js?v=3',
   '/manifest.json',
   '/icon.svg',
   '/catalog.json'

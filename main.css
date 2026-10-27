@@ -1157,3 +1157,696 @@ code, pre, kbd, .font-mono {
   gap: 0.5rem;
   border-bottom: 1px solid #b45309;
 }
+
+/* ==========================================================================
+   Stakeholder Crucible & De-escalation Simulator
+   ========================================================================== */
+.crucible-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.crucible-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.crucible-tab-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.crucible-tab-btn:hover {
+  border-color: var(--border-medium);
+  color: #fff;
+}
+
+.crucible-tab-btn.active {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: var(--accent-rose);
+  color: #fca5a5;
+}
+
+.crucible-card {
+  background: #06090e;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.crucible-scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.crucible-stakeholder-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-amber);
+}
+
+.crucible-quote {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 3px solid var(--accent-amber);
+  padding: 0.85rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: #fde68a;
+  margin: 1rem 0;
+  line-height: 1.5;
+}
+
+.crucible-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.crucible-choice-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1.1rem;
+  text-align: left;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.crucible-choice-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-cyan);
+}
+
+.crucible-choice-btn.selected {
+  border-color: var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.crucible-feedback-box {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.crucible-feedback-box.pass {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.crucible-feedback-box.fail {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: #fecdd3;
+}
+
+/* ==========================================================================
+   Cross-Industry Deployment & Air-Gap Compliance Matrix
+   ========================================================================== */
+.compliance-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.compliance-tier-card {
+  background: #06090e;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  transition: border-color var(--transition-fast);
+}
+
+.compliance-tier-card:hover {
+  border-color: var(--border-medium);
+}
+
+.compliance-tier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.compliance-tier-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.compliance-constraints-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.compliance-constraints-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.compliance-bullet {
+  color: var(--accent-cyan);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   FDE Definition of Done (DoD) & Handover Checklist
+   ========================================================================== */
+.dod-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.dod-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dod-item:hover {
+  border-color: var(--border-medium);
+}
+
+.dod-item.completed {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.dod-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--border-medium);
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.dod-item.completed .dod-checkbox {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  color: #020617;
+}
+
+.dod-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.dod-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Authoritative Enterprise Training Hub (External Resources)
+   ========================================================================== */
+.resource-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.resource-card {
+  background: #06090e;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all var(--transition-fast);
+}
+
+.resource-card:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.resource-provider {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-indigo);
+  margin-bottom: 0.35rem;
+}
+
+.resource-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.resource-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.resource-curriculum-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.resource-tag {
+  font-size: 0.7rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-subtle);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.resource-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.resource-link-btn:hover {
+  background: var(--accent-cyan);
+  color: #020617;
+  border-color: var(--accent-cyan);
+}
+
+/* ==========================================================================
+   FDE Take-Home Challenge Simulator
+   ========================================================================== */
+.takehome-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.takehome-timer-bar {
+  background: #06090e;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.takehome-time-val {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+.dataset-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin: 0.75rem 0;
+}
+
+.dataset-preview-table th {
+  background: var(--bg-secondary);
+  color: var(--text-subtle);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-medium);
+}
+
+.dataset-preview-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.dataset-preview-table tr.corrupt-row td {
+  background: rgba(244, 63, 94, 0.08);
+  color: #fda4af;
+}
+
+/* ==========================================================================
+   FDE Field Missions Engine: End-to-End Client Deployments
+   ========================================================================== */
+.mission-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mission-selector-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.mission-selector-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all var(--transition-fast);
+}
+
+.mission-selector-btn:hover {
+  border-color: var(--border-medium);
+  color: #fff;
+}
+
+.mission-selector-btn.active {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 14px var(--accent-cyan-glow);
+}
+
+.mission-stepper {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.mission-phase-step {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mission-phase-step:hover {
+  border-color: var(--border-medium);
+}
+
+.mission-phase-step.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--accent-indigo);
+}
+
+.mission-phase-step.completed {
+  border-color: var(--accent-emerald);
+}
+
+.phase-step-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.mission-phase-step.active .phase-step-num {
+  color: var(--accent-indigo);
+}
+
+.mission-phase-step.completed .phase-step-num {
+  color: var(--accent-emerald);
+}
+
+.phase-step-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mission-body-card {
+  background: #06090e;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.mission-brief-header {
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.mission-meta-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.mission-artifact-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.mission-artifact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   Company Dossiers & Outreach Scripts
+   ========================================================================== */
+.dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.dossier-card {
+  background: #06090e;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: border-color var(--transition-fast);
+}
+
+.dossier-card:hover {
+  border-color: var(--border-medium);
+}
+
+.dossier-company-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.dossier-stats-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.dossier-rounds-list {
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dossier-rounds-list li {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.outreach-script-card {
+  background: #06090e;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.outreach-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.outreach-text-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+
+/* ==========================================================================
+   Interactive Field Terminal Simulator & Diagnostic Drills
+   ========================================================================== */
+.terminal-window {
+  background: #030712;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.terminal-titlebar {
+  background: #0b1120;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.terminal-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
+
+.terminal-body {
+  padding: 1rem;
+  min-height: 200px;
+  max-height: 360px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #a5f3fc;
+}
+
+.terminal-output-line {
+  margin-bottom: 0.35rem;
+  white-space: pre-wrap;
+}
+
+.terminal-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.65rem 1rem;
+  background: #020617;
+}
+
+.terminal-prompt-label {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent-emerald);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.terminal-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: #fff;
+}
+

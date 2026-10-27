@@ -353,6 +353,279 @@ When a Fortune 100 CISO reviews your deployed software, they evaluate three fund
         answerIndex: 1,
         explanation: "Hash chaining (like a Merkle chain or git commit history) ensures that if any past record is modified or deleted, the subsequent hashes will fail verification immediately."
       }
+    },
+    {
+      id: "mod-palantir-ontology",
+      trackId: "solution-architecture",
+      title: "Palantir AIP & Enterprise Ontology Modeling (OSDK)",
+      difficulty: "Mission-Critical",
+      estimatedMinutes: 55,
+      tags: ["Palantir", "Foundry", "Ontology", "OSDK", "Action-Types", "Writeback"],
+      summary: "Model complex enterprise legacy data into kinetic Palantir-style Ontologies with Object Types, Link Types, Action Types, and validated writeback pipelines.",
+      content: `### The Power of an Enterprise Ontology
+
+In conventional data architectures, applications query raw tables or views (\`patients\`, \`encounters\`, \`claims\`). In a modern enterprise Forward Deployed environment (such as Palantir Foundry / AIP), data is transformed into a **Kinetic Ontology** — a real-time semantic layer connecting data objects, relations, and operational actions.
+
+#### The 4 Core Primitives
+1. **Object Types**: Business entities with typed properties and primary keys (e.g., \`Flight\`, \`AircraftTail\`, \`HospitalPatient\`).
+2. **Link Types**: First-class bidirectional relationships (e.g., \`HospitalPatient\` 1:N \`ClinicalEncounter\`, \`AircraftTail\` 1:1 \`AssignedPilot\`).
+3. **Action Types**: Declarative business mutations with validation gates and audit trails (e.g., \`ScheduleMaintenance\`, \`DischargePatient\`, \`RerouteFlight\`).
+4. **Writeback Handlers**: Safe synchronizers that push action mutations back into legacy transactional systems (SAP, Oracle, Epic) or event streams with transactional rollback.
+
+\`\`\`typescript
+// Example: TypeScript OSDK Action Definition with Validation Gate
+import { ActionDefinition, ActionValidationResult } from '@osdk/api';
+
+export const ScheduleEmergencyICUBed: ActionDefinition = {
+  apiName: 'scheduleEmergencyIcuBed',
+  parameters: {
+    patientId: { type: 'string', required: true },
+    targetWardId: { type: 'string', required: true },
+    justification: { type: 'string', required: true }
+  },
+  validate: async (ctx, params): Promise<ActionValidationResult> => {
+    const ward = await ctx.ontology.objects.HospitalWard.get(params.targetWardId);
+    if (ward.availableBeds <= 0) {
+      return { valid: false, reason: 'No ICU beds currently available in selected ward.' };
+    }
+    return { valid: true };
+  },
+  execute: async (ctx, params) => {
+    await ctx.ontology.actions.assignBed({
+      patientId: params.patientId,
+      wardId: params.targetWardId,
+      assignedAt: new Date().toISOString()
+    });
+    await ctx.services.ehrConnector.dispatchBedUpdate(params.patientId, params.targetWardId);
+  }
+};
+\`\`\`
+
+#### Field Checklist for FDEs
+- [ ] Map all primary keys to immutable surrogate identifiers (UUIDv4 or canonical composite hashes).
+- [ ] Ensure all Action Types define pre-condition validation rules before committing mutations.
+- [ ] Set up automated writeback reconciliation monitors that alert on sync drift between the Ontology and underlying source databases.`,
+      checkpoints: [
+        "Modeled Object Types and Link Types with bidirectional navigation",
+        "Configured Action Type validation gates preventing invalid operational states",
+        "Built resilient writeback adapters with compensatory transaction rollbacks"
+      ],
+      quiz: {
+        question: "In a Palantir-style Ontology architecture, what is the primary role of an 'Action Type'?",
+        options: [
+          "It executes raw SQL DROP TABLE statements on the production database",
+          "It encapsulates a business mutation with pre-condition validation, permission checks, audit logging, and legacy writeback",
+          "It replaces the React frontend with a command-line script",
+          "It automatically encrypts the developer's laptop hard drive"
+        ],
+        answerIndex: 1,
+        explanation: "Action Types turn read-only analytical data into an operational decision platform by bundling validation, authorization, audit logging, and writeback into a single atomic primitive."
+      }
+    },
+    {
+      id: "mod-airgap-llm-serving",
+      trackId: "ai-ml-fundamentals",
+      title: "Air-Gapped & Sovereign LLM Serving (vLLM & AWQ)",
+      difficulty: "Advanced",
+      estimatedMinutes: 50,
+      tags: ["vLLM", "AWQ-Quantization", "Air-Gap", "Offline-Inference", "GPU-VRAM"],
+      summary: "Package, size, and serve quantized 70B parameter models on disconnected multi-GPU nodes with PagedAttention and zero outbound telemetry.",
+      content: `### Disconnected Inference in Secure Bastions
+
+When deploying frontier AI into classified defense bunkers, intelligence enclaves, or private banking vaults, cloud APIs (OpenAI, Anthropic, Bedrock) are strictly forbidden. FDEs must deploy open-weights models (e.g. Llama-3-70B, Mistral Large, Qwen) completely offline.
+
+#### VRAM Budgeting & Quantization Arithmetic
+1. **Model Weights VRAM**:
+   - 16-bit FP16: 70 * 2 = 140 GB (requires 2x NVIDIA A100 80GB or 4x RTX 6000 Ada 48GB).
+   - 4-bit AWQ / GPTQ: 70 * 0.55 = ~38.5 GB (fits into a single NVIDIA A100 80GB or 2x 24GB RTX 4090s!).
+2. **KV Cache Calculation**:
+   - Grouped-Query Attention (GQA) dramatically reduces KV memory: KV_Bytes = 2 * layers * kv_heads * head_dim * bytes_per_element * context_len * batch_size.
+3. **vLLM PagedAttention Deployment Configuration**:
+   - Disable telemetry: set \`VLLM_NO_USAGE_STATS=1\`.
+   - Enforce offline Hugging Face cache: \`HF_HUB_OFFLINE=1\`.
+
+\`\`\`yaml
+# Air-Gapped Docker Compose Manifest for vLLM
+version: '3.8'
+services:
+  vllm-engine:
+    image: internal-harbor.local/fde/vllm:v0.4.2
+    container_name: fde-vllm-airgap
+    restart: always
+    environment:
+      - HF_HUB_OFFLINE=1
+      - VLLM_NO_USAGE_STATS=1
+      - CUDA_VISIBLE_DEVICES=0,1
+    volumes:
+      - /data/airgap_models/Meta-Llama-3-70B-Instruct-AWQ:/model:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+    command: >
+      --model /model
+      --quantization awq
+      --tensor-parallel-size 2
+      --max-model-len 8192
+      --gpu-memory-utilization 0.90
+      --enforce-eager
+\`\`\`
+
+#### Field Checklist for FDEs
+- [ ] Pre-compile Triton and CUDA kernel caches offsite to prevent 15-minute warmup delays during on-prem startup.
+- [ ] Verify \`sha256sum\` on all \`.safetensors\` model chunks before initiating model load.
+- [ ] Restrict vLLM HTTP listener to internal bridge network (127.0.0.1 or internal Docker network).`,
+      checkpoints: [
+        "Calculated precise VRAM allocation across weights, activation memory, and KV cache",
+        "Configured AWQ 4-bit tensor-parallel container topology with zero outbound traffic",
+        "Benchmarked concurrent time-to-first-token (TTFT) and throughput under simulated load"
+      ],
+      quiz: {
+        question: "Why is setting HF_HUB_OFFLINE=1 and VLLM_NO_USAGE_STATS=1 critical in air-gapped defense or hospital environments?",
+        options: [
+          "It makes the GPU fans spin in reverse to save power",
+          "It prevents containers from attempting external telemetry connections that trigger security firewall alerts and connection timeouts",
+          "It reduces token generation cost to zero dollars",
+          "It enables automatic dark mode on the client's monitor"
+        ],
+        answerIndex: 1,
+        explanation: "Default open-source ML libraries often attempt to phone home to verify hub releases or send anonymous telemetry. In an air-gap, these outbound attempts hang sockets or trigger automated InfoSec intrusion detection systems."
+      }
+    },
+    {
+      id: "mod-streaming-cdc-kafka",
+      trackId: "core-tech-stack",
+      title: "Enterprise CDC, Debezium & Real-Time Schemas",
+      difficulty: "Advanced",
+      estimatedMinutes: 50,
+      tags: ["CDC", "Debezium", "Kafka", "Schema-Registry", "Avro", "ClickHouse"],
+      summary: "Extract low-latency database mutations from legacy transactional systems without table locking using write-ahead log replication.",
+      content: `### Non-Invasive Data Extraction via Change Data Capture (CDC)
+
+In enterprise engagements, client DBAs will vehemently refuse permission to run recurring periodic SQL extraction queries against their transactional systems due to table locks and CPU degradation.
+
+The industry standard solution is **Log-Based Change Data Capture (CDC)** using Debezium over the database's write-ahead transaction log (WAL / Oplog / Redo Log).
+
+#### Why Log-Based CDC Wins
+1. **Zero Table Locks**: Reads internal binary logs sequentially from disk without holding locks on operational tables.
+2. **Captures Deletes & Intermediary States**: Periodic polling misses rows that were updated and deleted between poll intervals; CDC captures every atomic state transition.
+3. **Sub-Second Latency**: Mutations are streamed to Apache Kafka or Redpanda within <100 milliseconds of commit.
+
+\`\`\`json
+// Debezium Postgres CDC Connector Configuration
+{
+  "name": "fde-core-banking-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "plugin.name": "pgoutput",
+    "database.hostname": "core-db.internal",
+    "database.port": "5432",
+    "database.user": "debezium_repl",
+    "database.password": "\${vault:cdc_password}",
+    "database.dbname": "banking_prod",
+    "database.server.name": "fintech_prod",
+    "table.include.list": "public.accounts,public.transactions",
+    "tombstones.on.delete": "false",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}
+\`\`\`
+
+#### Handling Schema Drift with Avro & Schema Registry
+Enterprise clients change database columns without warning. Using Confluent Schema Registry with **FULL_TRANSITIVE** compatibility ensures downstream consumers gracefully ignore new nullable fields or use defaults without breaking pipelines.`,
+      checkpoints: [
+        "Configured non-locking WAL logical replication slot with read-only user permissions",
+        "Set up Avro schema serialization with backward and forward compatibility rules",
+        "Constructed dead-letter queue (DLQ) routing for malformed CDC events"
+      ],
+      quiz: {
+        question: "Why is log-based CDC via Debezium preferred over polling queries (SELECT * WHERE updated_at > ?) on legacy client databases?",
+        options: [
+          "Polling queries require the database to be converted to MongoDB first",
+          "Log-based CDC reads the write-ahead log with zero table locks, captures hard deletes, and streams events in sub-second latency",
+          "CDC queries are written in CSS instead of SQL",
+          "Polling queries require internet access while CDC works via Bluetooth"
+        ],
+        answerIndex: 1,
+        explanation: "CDC reads binary transaction logs directly, avoiding table scans, locks, and missed intermediate row mutations."
+      }
+    },
+    {
+      id: "mod-llm-eval-rag-triad",
+      trackId: "ai-ml-fundamentals",
+      title: "Enterprise LLM Evaluation & The RAG Triad",
+      difficulty: "Mission-Critical",
+      estimatedMinutes: 45,
+      tags: ["Evaluation", "RAG-Triad", "Faithfulness", "Ragas", "LLM-as-Judge"],
+      summary: "Construct automated CI/CD evaluation harnesses measuring Context Precision, Faithfulness/Groundedness, and Answer Relevance before production rollout.",
+      content: `### Moving Past 'Vibe-Based' Evaluation
+
+Amateur developers test AI prompts by eye in a web UI. Enterprise Forward Deployed Engineers implement automated, metric-driven evaluation pipelines using the **RAG Triad** to prevent hallucinations in mission-critical deployments.
+
+#### The RAG Triad Metrics
+1. **Context Relevance (Retrieval Precision)**: Are the retrieved text chunks strictly relevant to the user query, or is the context window flooded with noisy irrelevance?
+2. **Groundedness / Faithfulness (Hallucination Detector)**: Is every factual claim in the generated output mathematically supported by the retrieved context, or did the model invent facts?
+3. **Answer Relevance**: Does the generated answer directly address the user's explicit question without meandering into tangential commentary?
+
+\`\`\`python
+# Automated RAG Triad Evaluation Harness with LLM-as-a-Judge
+from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,
+    answer_relevancy,
+    context_precision,
+    context_recall
+)
+from datasets import Dataset
+
+# Enterprise Evaluation Gold Dataset
+eval_data = {
+    'question': ["What is the maximum allowable backpressure delay for core payment events?"],
+    'contexts': [["Section 4.2: Payment event queues apply token-bucket rate limiting with a hard timeout cap of 250ms before routing to DLQ."]],
+    'answer': ["The maximum allowable backpressure delay is 250ms, after which events are routed to the Dead Letter Queue."],
+    'ground_truth': ["250ms before dead letter queue routing"]
+}
+
+dataset = Dataset.from_dict(eval_data)
+results = evaluate(
+    dataset,
+    metrics=[faithfulness, answer_relevancy, context_precision, context_recall]
+)
+
+print(f"Faithfulness Score: {results['faithfulness']:.4f}")
+print(f"Answer Relevancy: {results['answer_relevancy']:.4f}")
+assert results['faithfulness'] >= 0.95, "Deployment Rejected: Faithfulness score below SLA threshold!"
+\`\`\`
+
+#### Field Checklist for FDEs
+- [ ] Require a minimum 50-sample enterprise ground truth test set signed off by client domain experts.
+- [ ] Embed automated evaluation thresholds into Git pre-merge hooks and deployment gates.
+- [ ] Track metric drift continuously across weekly client updates.`,
+      checkpoints: [
+        "Constructed synthetic ground truth QA test sets from customer documentation",
+        "Implemented automated faithfulness and context relevance scoring pipelines",
+        "Established CI/CD deployment gates blocking models with hallucination scores > 5%"
+      ],
+      quiz: {
+        question: "If an LLM outputs an answer that sounds plausible and answers the user's question, but references facts never found in the retrieved source documents, which RAG Triad metric failed?",
+        options: [
+          "Context Precision",
+          "Faithfulness (Groundedness)",
+          "TCP Handshake Window",
+          "CSS Line-Height"
+        ],
+        answerIndex: 1,
+        explanation: "Faithfulness measures whether the response is strictly grounded in and entailed by the retrieved source context. When facts are generated from pre-trained memory rather than source documents, faithfulness fails."
+      }
     }
   ],
   flashcards: [
@@ -411,6 +684,90 @@ When a Fortune 100 CISO reviews your deployed software, they evaluate three fund
       question: "How do you detect and reconcile concurrent updates to the same entity across distributed offline nodes?",
       answer: "Vector Clocks or Version Vectors. Each node maintains a logical counter vector. If vector A dominantly exceeds vector B across all clocks, A is causally newer. If clocks conflict, resolve via Last-Write-Wins (LWW) with synchronized NTP or trigger application-level merge functions.",
       proTip: "In browser offline apps, CRDTs or UUID version tokens provide reliable reconciliation."
+    },
+    {
+      id: "fc-9",
+      deck: "System Design for FDE",
+      question: "What is an 'Action Type' in a Palantir-style enterprise Ontology, and how does writeback work?",
+      answer: "An Action Type is a declarative business operation with pre-condition validation, permission checks, and audit logging. When triggered, it mutates Ontology object links and executes an asynchronous or synchronous writeback adapter (via REST, Kafka, or SQL) to push the mutation back to legacy client systems.",
+      proTip: "Always enforce compensatory transactions (saga pattern) in case downstream legacy ERP rejects the writeback."
+    },
+    {
+      id: "fc-10",
+      deck: "System Design for FDE",
+      question: "How do you size GPU VRAM for offline LLM serving with vLLM in an air-gapped facility?",
+      answer: "Base weights in 4-bit AWQ = ~0.55 GB per 1B parameters (70B model = 38.5 GB). Then add KV cache: KV_bytes = 2 * layers * kv_heads * head_dim * bytes_per_element * context_len * batch_size. For 70B with 8k context and batch 8, allocate at least 16GB for KV cache. Total = ~55 GB VRAM (requires 1x A100 80GB or 2x RTX 4090 24GB).",
+      proTip: "Set HF_HUB_OFFLINE=1 and VLLM_NO_USAGE_STATS=1 to prevent failed outbound telemetry pings."
+    },
+    {
+      id: "fc-11",
+      deck: "Data Pipelines & Ingestion",
+      question: "Why is Log-Based CDC (Debezium) superior to periodic polling queries (SELECT * WHERE updated_at > ?) for legacy enterprise DBs?",
+      answer: "Log-based CDC reads the write-ahead log (WAL) with zero table locks, captures hard deletes (which polling misses), captures intermediate mutations between polls, and delivers events with sub-100ms latency without spiking database CPU.",
+      proTip: "Always request a read-only replication user and establish statement timeouts on initial snapshot tables."
+    },
+    {
+      id: "fc-12",
+      deck: "Data Pipelines & Ingestion",
+      question: "What is the Outbox Pattern and why is it essential when updating a database and publishing a Kafka event?",
+      answer: "In distributed systems, writing to a database and publishing to Kafka cannot be coordinated in a single two-phase commit without severe latency. The Outbox Pattern writes the business row and an event record into an 'outbox' table within the SAME local database transaction. A separate CDC process or worker then streams from the outbox to Kafka with at-least-once delivery guarantee.",
+      proTip: "Pair with an idempotency key on consumers to achieve effectively exactly-once semantics."
+    },
+    {
+      id: "fc-13",
+      deck: "AI/ML & Local LLM Serving",
+      question: "What are the three core metrics of the 'RAG Triad' in enterprise LLM evaluation?",
+      answer: "1. Context Relevance: Are the retrieved chunks relevant to the user prompt? (Precision/Recall)\n2. Groundedness (Faithfulness): Are all claims in the generated answer strictly entailed by the context?\n3. Answer Relevance: Does the output directly answer the prompt without hallucinated tangents?",
+      proTip: "Use frameworks like Ragas or TruLens to automate RAG Triad scoring in CI/CD deployment gates."
+    },
+    {
+      id: "fc-14",
+      deck: "AI/ML & Local LLM Serving",
+      question: "What is Reciprocal Rank Fusion (RRF) and why is it used in enterprise hybrid search?",
+      answer: "RRF merges ranked results from two distinct search strategies (e.g. BM25 keyword search and dense vector semantic search) without requiring score normalization. Formula: RRF_score(d) = sum(1 / (k + rank_i(d))), where k is typically 60. It reliably boosts domain keyword accuracy while preserving semantic nuance.",
+      proTip: "Essential when customers search for exact part serial numbers or acronyms alongside natural language questions."
+    },
+    {
+      id: "fc-15",
+      deck: "Enterprise Security & Compliance",
+      question: "What is the difference between DoD IL5 and IL6 compliance in forward deployments?",
+      answer: "DoD Impact Level 5 (IL5) accommodates Controlled Unclassified Information (CUI) and unclassified National Security Systems. Impact Level 6 (IL6) accommodates classified data up to SECRET. IL6 mandates physical air-gapped enclaves, SCIF physical access controls, and zero wireless signals.",
+      proTip: "For IL6, all software, models, and dependencies must be transported via verified, cryptographically hashed optical or encrypted media."
+    },
+    {
+      id: "fc-16",
+      deck: "Enterprise Security & Compliance",
+      question: "Why should an FDE never set NODE_TLS_REJECT_UNAUTHORIZED=0 in a customer environment?",
+      answer: "Setting this environment variable disables TLS certificate verification globally, making all network traffic vulnerable to Man-In-The-Middle (MITM) eavesdropping and credential theft. Instead, export the client corporate CA certificate and configure NODE_EXTRA_CA_CERTS=/path/to/corporate-ca.crt.",
+      proTip: "Disabling TLS verification in a banking or defense environment will immediately fail InfoSec review."
+    },
+    {
+      id: "fc-17",
+      deck: "Docker & Distributed Systems",
+      question: "How do you diagnose why a container in an air-gapped Kubernetes cluster is stuck in CrashLoopBackOff without internet?",
+      answer: "1. Inspect exit code: kubectl describe pod <pod-name> (look for OOMKilled=137 or CommandNotFound=127).\n2. Read previous container logs: kubectl logs <pod-name> --previous.\n3. Run ephemeral debug container or check volume mounts and permissions (chmod).\n4. Verify entrypoint binary architecture (x86_64 vs arm64) using file <binary>.",
+      proTip: "OOMKilled code 137 means the container exceeded memory limit; increase memory limit in Helm values."
+    },
+    {
+      id: "fc-18",
+      deck: "Client Scoping & Politics",
+      question: "What is an 'Executive Milestone POC Demo' and how should an FDE structure it?",
+      answer: "A high-stakes 20-minute meeting for client C-level sponsors (CIO, VP of Ops). Structure:\n1. 3 mins: Reiterate agreed business problem & metric baseline.\n2. 10 mins: Live software demo running on their real/sanitized data demonstrating target metric.\n3. 4 mins: Quantified impact summary (e.g. 'Reduced manual triage from 4 hours to 8 minutes').\n4. 3 mins: Clear next steps and contract transition criteria.",
+      proTip: "Never show raw JSON or shell scripts to executives; show intuitive metrics, dashboards, and operational flows."
+    },
+    {
+      id: "fc-19",
+      deck: "Algorithmic Edge Cases",
+      question: "What is the Fellegi-Sunter methodology for Master Patient Index (MPI) record linkage in healthcare?",
+      answer: "A probabilistic entity resolution framework that calculates log-likelihood ratio weights for matching and non-matching attributes (e.g. phonetic first name, last name, date of birth, SSN, address). Records with total weight above threshold T_high are declared matches; between T_low and T_high require human clinical review; below T_low are distinct patients.",
+      proTip: "Drops patient record mismatch rate from ~15% down to <0.5% across disparate EHRs."
+    },
+    {
+      id: "fc-20",
+      deck: "System Design for FDE",
+      question: "What are the 6 pillars of the FDE 'Definition of Done' before offboarding from a client site?",
+      answer: "1. Zero-Secret Manifests (Vault / KMS injection).\n2. Automated Health & Readiness Probes (<200ms with graceful drain).\n3. Immutable Hash-Chained Audit Trails (SHA-256).\n4. Disaster Recovery & Rollback Runbook (tested 15-minute recovery).\n5. Client Shadow Pairing Complete (client engineers operate unassisted).\n6. Signed Executive Acceptance (quantified SLA validation signed by VP).",
+      proTip: "A deployment isn't complete when you can run it—it's complete when the customer's junior engineer can maintain it."
     }
   ],
   puzzles: [
@@ -552,6 +909,104 @@ When a Fortune 100 CISO reviews your deployed software, they evaluate three fund
               label: "Proxy API calls to a public commercial AI endpoint using personal API keys.",
               score: 0,
               feedback: "Disastrous! Air-gapped datacenters block outbound requests, and submitting hospital clinical text to public APIs is an immediate contract termination breach."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "scenario-fintech-cdc",
+      title: "Real-Time CDC & Fraud Ontology for Tier-1 Commercial Bank",
+      client: "Global Commercial Bank (Core Banking Group)",
+      challenge: "The customer's core banking runs on a mainframe DB2 database with overnight batch balance reconciliation. Fraud detection teams cannot detect fraudulent withdrawals until 24 hours later. The VP of Risk mandates sub-second fraud alerts without impacting the core transaction ledger.",
+      stages: [
+        {
+          stageNumber: 1,
+          title: "Stage 1: Non-Invasive Ingestion & Zero-Lock CDC",
+          prompt: "The lead mainframe DBA refuses periodic SQL SELECT queries because of table locking. How do you capture transactions continuously?",
+          choices: [
+            {
+              id: "a",
+              label: "Deploy Debezium CDC reading the write-ahead recovery log (WAL/redo log) with a read-only replication privilege, streaming raw mutations into Apache Kafka with Avro serialization.",
+              score: 100,
+              feedback: "Flawless! Log-based CDC bypasses query locks completely and guarantees sub-100ms event delivery."
+            },
+            {
+              id: "b",
+              label: "Trigger a full database dump every 5 minutes to an S3 bucket.",
+              score: 0,
+              feedback: "Fatal mistake: continuous dumps cause severe disk I/O thrashing and will freeze core banking transactions."
+            },
+            {
+              id: "c",
+              label: "Inject an HTTP webhook directly into the 20-year-old COBOL transaction processing routine.",
+              score: 15,
+              feedback: "High risk: modifying core banking COBOL code introduces catastrophic regression risk."
+            }
+          ]
+        },
+        {
+          stageNumber: 2,
+          title: "Stage 2: Streaming Analytics & Fast Inference SLA",
+          prompt: "Incoming transactions spike to 18,000 events/sec during Black Friday. Fraud scores must be calculated within <80ms. How do you architect the serving layer?",
+          choices: [
+            {
+              id: "a",
+              label: "Sink Kafka events into ClickHouse with Materialized Views for rolling window aggregations, evaluated by a containerized XGBoost microservice over gRPC.",
+              score: 100,
+              feedback: "Industry standard: ClickHouse handles 100k+ inserts/sec effortlessly while gRPC keeps microservice inference well under 25ms."
+            },
+            {
+              id: "b",
+              label: "Write all events to a single SQLite file and run a Python for-loop.",
+              score: 0,
+              feedback: "SQLite will lock on write concurrency immediately under 18k events/sec."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "scenario-defense-airgap",
+      title: "Multi-Modal Avionics Intelligence in a Classified Air-Gapped Depot",
+      client: "Aerospace Logistics & Maintenance Command",
+      challenge: "1.5 million legacy scanned maintenance PDFs and sensor logs are siloed inside an underground bunker with zero internet connectivity. Field technicians need natural-language troubleshooting assistance to locate wiring schematics in under 3 seconds.",
+      stages: [
+        {
+          stageNumber: 1,
+          title: "Stage 1: Air-Gap Media Transfer & Cryptographic Integrity",
+          prompt: "How do you securely transport model weights, container images, and software updates into the classified facility?",
+          choices: [
+            {
+              id: "a",
+              label: "Export pre-tested Docker tarballs and AWQ model weights onto client-accredited encrypted physical drives, verifying SHA-256 checksums at the air-gap hardware gate before importing to internal Harbor registry.",
+              score: 100,
+              feedback: "Exemplary defense deployment protocol: strict hash verification prevents corrupted binaries and complies with security accreditation."
+            },
+            {
+              id: "b",
+              label: "Tether a mobile 5G hotspot under your desk to download Hugging Face packages.",
+              score: 0,
+              feedback: "Severe security violation: bringing unauthorized wireless transmitters into a secure facility is an espionage breach."
+            }
+          ]
+        },
+        {
+          stageNumber: 2,
+          title: "Stage 2: Offline Multi-Modal Search & Vector Indexing",
+          prompt: "The PDF schematics contain complex technical diagrams and OCR scans. What indexing topology yields accurate pinpointing without cloud APIs?",
+          choices: [
+            {
+              id: "a",
+              label: "Process PDFs via local PaddleOCR/Tesseract containers, generate dense embeddings using on-prem BAAI/BGE models, and index into an air-gapped Qdrant vector cluster with reciprocal rank fusion (RRF).",
+              score: 100,
+              feedback: "Top-tier architecture: local OCR + dense embeddings + RRF delivers 92%+ pinpoint accuracy entirely within the offline perimeter."
+            },
+            {
+              id: "b",
+              label: "Rely solely on naive SQL LIKE '%wire%' queries against unparsed file names.",
+              score: 10,
+              feedback: "Unusable: fails to extract text from scanned images and cannot match semantic synonyms."
             }
           ]
         }
@@ -961,6 +1416,997 @@ const CAREER_LADDER_TIERS = [
 ];
 
 // ============================================================================
+// STAKEHOLDER CRUCIBLE & DE-ESCALATION SIMULATOR
+// ============================================================================
+const CRUCIBLE_SCENARIOS = [
+  {
+    id: "dba-standoff",
+    title: "The Entrenched Legacy DBA",
+    stakeholder: "Dave Kowalski, Principal Database Administrator (18 yrs at Client)",
+    quote: "I've maintained this Oracle cluster for 18 years. Your 'CDC container' is going to lock our table, trigger redo buffer exhaustion, and blow our SLA. I'm revoking your read credentials before tonight's payroll run.",
+    context: "Client Steering Committee demo is in 48 hours. If you cannot stream live ledger transactions, the POC fails. The DBA has the authority to revoke network access.",
+    choices: [
+      {
+        id: "choice-1",
+        label: "Present a mathematically isolated read-only replication architecture with statement_timeout = 250ms and offer to run a zero-impact EXPLAIN ANALYZE drill on their staging replica.",
+        points: 100,
+        resultType: "pass",
+        outcome: "Dave inspects the statement_timeout, verifies that CDC reads only the archived redo log with zero table locks, and grants read replica access. He becomes your strongest internal champion for the steering committee demo."
+      },
+      {
+        id: "choice-2",
+        label: "Escalate directly to the Client VP of Engineering and demand they order Dave to grant full DBA permissions immediately.",
+        points: 15,
+        resultType: "fail",
+        outcome: "The VP feels cornered and Dave digs in his heels, citing corporate compliance regulation Section 4.1. Security flags your engagement, and your onboarding is delayed by 3 weeks."
+      },
+      {
+        id: "choice-3",
+        label: "Silently switch to polling the database every 10 seconds via raw SELECT * FROM payroll to bypass CDC.",
+        points: 0,
+        resultType: "fail",
+        outcome: "Disastrous: periodic table scans lock the active payroll ledger table during end-of-month batch processing. Production transactions freeze, and InfoSec revokes your badge on the spot."
+      }
+    ]
+  },
+  {
+    id: "ciso-airgap",
+    title: "The CISO Air-Gap Protocol Ambush",
+    stakeholder: "Elena Vance, Chief Information Security Officer (Defense Enclave)",
+    quote: "Our automated intrusion detection system caught your pod attempting an outbound NTP handshake on UDP port 123. In this classified facility, any unauthorized egress is an immediate contract breach. We are freezing your cluster.",
+    context: "Your team deployed a container that had default NTP chrony syncing enabled. The bunker's firewall blocked the packet, but the audit alert was sent to the executive security board.",
+    choices: [
+      {
+        id: "choice-1",
+        label: "Acknowledge the alert immediately, present the container manifest diff disabling external NTP and pinning to the client's internal PTP/NTP clock gateway (10.0.0.1), and provide SHA-256 hashes of all audit logs proving zero data payload egressed.",
+        points: 100,
+        resultType: "pass",
+        outcome: "Elena respects the immediate cryptographic proof and transparent remediation. The freeze is lifted within 2 hours, and the incident is recorded as a successfully handled containment drill."
+      },
+      {
+        id: "choice-2",
+        label: "Argue that NTP is just time synchronization and cannot leak classified data, so InfoSec is overreacting.",
+        points: 0,
+        resultType: "fail",
+        outcome: "Catastrophic: in defense/intelligence enclaves, protocol violations are zero-tolerance. Elena escalates to the contracting command and terminates the vendor deployment."
+      },
+      {
+        id: "choice-3",
+        label: "Delete the pod quietly without notifying InfoSec and hope their alert log clears overnight.",
+        points: 10,
+        resultType: "fail",
+        outcome: "Audit logs are append-only. Elena's team notices the uncoordinated pod deletion, flags it as suspicious tampering, and revokes all physical bunker access."
+      }
+    ]
+  },
+  {
+    id: "scope-creep",
+    title: "The Executive Scope-Creep Ambush",
+    stakeholder: "Marcus Sterling, VP of Global Operations",
+    quote: "The steering committee meets in 48 hours. We love the batch pipeline, but our CEO just saw an AI video demo and wants real-time streaming video analysis included in this SOW. We need it live on stage.",
+    context: "Your agreed 30-day SOW covers tabular EHR/financial data only. Streaming video requires RTSP ingestion, GPU decoding clusters, and YOLO/vLLM models that are completely out of scope.",
+    choices: [
+      {
+        id: "choice-1",
+        label: "Empathetically validate the vision, reiterate the quantifiable ROI of the agreed tabular milestone, and offer an architectural mockup + Phase 2 roadmap slide for the CEO presentation while keeping the live demo rock-solid.",
+        points: 100,
+        resultType: "pass",
+        outcome: "Marcus feels heard, the live demo nails the agreed metrics without crashing, and the Phase 2 video expansion roadmap is approved as a $1.8M ARR contract renewal."
+      },
+      {
+        id: "choice-2",
+        label: "Stay up all night hacking together a flaky Python OpenCV script using personal laptop webcams.",
+        points: 20,
+        resultType: "fail",
+        outcome: "During the live CEO demo, the unvetted OpenCV script throws an RTSP buffer overrun error, freezes the main dashboard, and overshadows the excellent batch data results."
+      },
+      {
+        id: "choice-3",
+        label: "Bluntly inform the VP that contractually they cannot change the SOW without a formal legal amendment.",
+        points: 30,
+        resultType: "fail",
+        outcome: "Technically true, but politically tone-deaf. The executive feels dismissed and questions whether your company is a collaborative enterprise partner."
+      }
+    ]
+  }
+];
+
+// ============================================================================
+// CROSS-INDUSTRY DEPLOYMENT & AIR-GAP COMPLIANCE TIERS
+// ============================================================================
+const COMPLIANCE_TIERS = [
+  {
+    id: "tier-defense",
+    name: "Defense & Classified Intel",
+    badge: "DoD IL5 / IL6 · SCIF",
+    accent: "var(--accent-rose)",
+    characteristics: [
+      "Zero outbound internet access; all media transferred via encrypted drives with verified sha256sum.",
+      "Physical SCIF security: no mobile devices, strict optical data diode unidirectionality.",
+      "FedRAMP High & FIPS 140-3 validated cryptographic modules.",
+      "Local LLM serving required (vLLM with offline quantized weights; zero cloud API calls)."
+    ]
+  },
+  {
+    id: "tier-fintech",
+    name: "FinTech & Commercial Banking",
+    badge: "PCI-DSS Level 1 · SOC2 Type II",
+    accent: "var(--accent-cyan)",
+    characteristics: [
+      "Non-locking log-based Change Data Capture (Debezium WAL) to protect core ledgers.",
+      "Sub-100ms end-to-end fraud scoring latency SLA with active-active regional failover.",
+      "Immutable append-only audit logs with Merkle hash chaining.",
+      "Mandatory tokenization and PII vaulting (PAN and SSN never stored in plaintext)."
+    ]
+  },
+  {
+    id: "tier-healthcare",
+    name: "Healthcare & Clinical EHR",
+    badge: "HIPAA · HITRUST · FHIR",
+    accent: "var(--accent-emerald)",
+    characteristics: [
+      "Protected Health Information (PHI) de-identification via Safe Harbor or Expert Determination.",
+      "Business Associate Agreement (BAA) and mTLS certificate pinning across 14+ hospitals.",
+      "Probabilistic entity resolution (Fellegi-Sunter) for disparate EHR patient record deduplication.",
+      "Ontology writeback safety gates: human doctor approval required before committing mutations to core EHR."
+    ]
+  },
+  {
+    id: "tier-iot",
+    name: "Industrial IoT & Edge Fleet",
+    badge: "IEC 62443 · CAN Bus",
+    accent: "var(--accent-amber)",
+    characteristics: [
+      "Extreme environmental resilience: high temperature, vibration, intermittent cellular backhaul.",
+      "Local edge buffering: store-and-forward architecture with SQLite/DuckDB persistence.",
+      "Over-The-Air (OTA) atomic dual-root A/B partition updates with automatic rollback on boot fail.",
+      "Strict memory footprint constraints (<2GB RAM, ARM64 low-power compute)."
+    ]
+  }
+];
+
+// ============================================================================
+// FDE DEFINITION OF DONE (DOD) & HANDOVER CHECKLIST
+// ============================================================================
+const DOD_CHECKLIST_ITEMS = [
+  {
+    id: "dod-1",
+    title: "Zero-Secret Docker Manifests",
+    desc: "All database passwords, API tokens, and TLS keys injected dynamically via HashiCorp Vault or Kubernetes Secrets. Zero hardcoded credentials in Git or env files."
+  },
+  {
+    id: "dod-2",
+    title: "Automated Health & Readiness Probes",
+    desc: "All HTTP/gRPC services implement /healthz and /readyz endpoints with sub-200ms response times and graceful connection draining on SIGTERM."
+  },
+  {
+    id: "dod-3",
+    title: "Immutable Hash-Chained Audit Trail",
+    desc: "Every read, write, export, and model query writes an append-only log entry containing actor ID, timestamp, and SHA-256 hash of the previous record."
+  },
+  {
+    id: "dod-4",
+    title: "Disaster Recovery & 15-Minute Rollback Runbook",
+    desc: "Complete operational runbook tested via simulated node power failure and database corruption. Documented recovery executed in under 15 minutes."
+  },
+  {
+    id: "dod-5",
+    title: "Client Shadow Pairing Complete",
+    desc: "Customer technical leads and DBAs successfully deployed, patched, and debugged the pipeline unassisted during two paired shadow sessions."
+  },
+  {
+    id: "dod-6",
+    title: "Signed Executive Acceptance & SLA Sign-off",
+    desc: "Formal acceptance document signed by Client VP of Engineering verifying that agreed performance metrics (latency, accuracy, throughput) were met."
+  }
+];
+
+// ============================================================================
+// AUTHORITATIVE ENTERPRISE TRAINING HUB (EXTERNAL RESOURCES)
+// ============================================================================
+const ENTERPRISE_RESOURCES = [
+  {
+    id: "res-aws",
+    provider: "Amazon Web Services",
+    title: "AWS Prescriptive Guidance: Hybrid & Air-Gapped Migration",
+    desc: "Official architectural playbooks for disconnected edge deployments using AWS Snow Family (Snowball Edge) and AWS Outposts with strict IAM isolation.",
+    tags: ["AWS", "Snowball", "Outposts", "Hybrid-Cloud"],
+    url: "https://docs.aws.amazon.com/prescriptive-guidance/"
+  },
+  {
+    id: "res-gcp",
+    provider: "Google Cloud",
+    title: "GCP Architecture Center: Secure GenAI in Private Enclaves",
+    desc: "Hardening Google Kubernetes Engine (GKE) bastions, Private Service Connect (PSC), and VPC Service Controls for enterprise LLM workloads.",
+    tags: ["Google Cloud", "Vertex AI", "VPC-SC", "Private Enclave"],
+    url: "https://cloud.google.com/architecture"
+  },
+  {
+    id: "res-azure",
+    provider: "Microsoft Azure",
+    title: "Azure Architecture Center: Enterprise RAG with Azure OpenAI",
+    desc: "Production patterns for zero-data-retention LLM inference, Cognitive Search vector indexing, and sovereign disconnected Azure Stack Hub deployments.",
+    tags: ["Azure", "Azure OpenAI", "Azure Stack", "Enterprise RAG"],
+    url: "https://learn.microsoft.com/en-us/azure/architecture/"
+  },
+  {
+    id: "res-palantir",
+    provider: "Palantir Technologies",
+    title: "Palantir Learning & Foundry/AIP Documentation",
+    desc: "Comprehensive guides to building Kinetic Ontologies, writing TypeScript/Python OSDK action types, and orchestrating Apollo continuous deployments.",
+    tags: ["Palantir", "Foundry", "AIP", "OSDK", "Ontology"],
+    url: "https://learn.palantir.com"
+  },
+  {
+    id: "res-databricks",
+    provider: "Databricks",
+    title: "Databricks Generative AI Academy & Mosaic AI",
+    desc: "Building compound AI systems, fine-tuning domain models on proprietary Lakehouse data, and managing real-time Delta Live Tables (DLT).",
+    tags: ["Databricks", "Mosaic AI", "Lakehouse", "Delta Live Tables"],
+    url: "https://www.databricks.com/learn"
+  },
+  {
+    id: "res-openai",
+    provider: "OpenAI",
+    title: "OpenAI Cookbook: Enterprise Evaluation & Structured Outputs",
+    desc: "Battle-tested patterns for LLM-as-a-judge evaluation harnesses, strict JSON schema function calling, and RAG optimization techniques.",
+    tags: ["OpenAI", "Evaluation", "Structured Outputs", "Function Calling"],
+    url: "https://cookbook.openai.com"
+  },
+  {
+    id: "res-anthropic",
+    provider: "Anthropic",
+    title: "Anthropic Prompt Engineering Course & Contextual Retrieval",
+    desc: "Interactive prompt engineering guide and architectural blueprint for prepending chunk context to boost semantic retrieval accuracy by up to 49%.",
+    tags: ["Anthropic", "Claude", "Contextual Retrieval", "Prompt Caching"],
+    url: "https://github.com/anthropics/prompt-eng-interactive-tutorial"
+  },
+  {
+    id: "res-clickhouse",
+    provider: "ClickHouse",
+    title: "ClickHouse Academy: High-Throughput Real-Time Analytics",
+    desc: "Mastering MergeTree storage engines, materialized views, and sub-second analytical aggregations across hundreds of millions of client events.",
+    tags: ["ClickHouse", "OLAP", "Real-Time Analytics", "Materialized Views"],
+    url: "https://clickhouse.com/learn"
+  },
+  {
+    id: "res-confluent",
+    provider: "Confluent",
+    title: "Confluent Developer: Event-Driven CDC with Debezium & Kafka",
+    desc: "Capturing transactional database mutations non-invasively, handling schema drift with Confluent Schema Registry, and managing dead-letter queues.",
+    tags: ["Kafka", "Debezium", "CDC", "Avro", "Schema Registry"],
+    url: "https://developer.confluent.io"
+  }
+];
+
+// ============================================================================
+// FDE TAKE-HOME CHALLENGE SIMULATOR DATASET & VALIDATOR
+// ============================================================================
+const TAKEHOME_DATASET = [
+  { tx_id: "TX-1001", account_id: "ACC-901", amount: 4500.00, currency: "USD", timestamp: "2026-10-24T08:12:00Z", status: "CLEAN" },
+  { tx_id: "TX-1002", account_id: "ACC-902", amount: 1200.50, currency: "EUR", timestamp: "2026-10-24T08:14:15Z", status: "CLEAN" },
+  { tx_id: "TX-1001", account_id: "ACC-901", amount: 4750.00, currency: "usd", timestamp: "2026-10-24T08:15:30Z", status: "DUPLICATE_NEWER" },
+  { tx_id: "TX-1003", account_id: "", amount: 890.00, currency: "USD", timestamp: "2026-10-24T08:16:00Z", status: "CORRUPT_NO_ACCT" },
+  { tx_id: "TX-1004", account_id: "ACC-904", amount: -350.00, currency: "USD$", timestamp: "2026-10-24T08:18:22Z", status: "CORRUPT_NEGATIVE" },
+  { tx_id: "TX-1005", account_id: "ACC-905", amount: 2100.00, currency: "GBP", timestamp: "2026-10-24T08:20:00Z", status: "CLEAN" },
+  { tx_id: "TX-1006", account_id: "ACC-906", amount: 550.00, currency: "usd", timestamp: "2026-10-24T08:22:10Z", status: "CORRUPT_CURRENCY_CASE" },
+  { tx_id: "TX-1002", account_id: "ACC-902", amount: 1200.50, currency: "EUR", timestamp: "2026-10-24T08:13:00Z", status: "DUPLICATE_OLDER" }
+];
+
+const TAKEHOME_STARTER_CODE = `/**
+ * Reconcile dirty core banking transaction feed
+ * @param {Array} records - Array of raw transaction objects
+ * @param {Object} fxRates - Currency conversion rates to USD (e.g. { EUR: 1.08, GBP: 1.28, USD: 1.0 })
+ * @returns {Object} { cleanRecords: [], deadLetterQueue: [], totalVolumeUsd: number }
+ */
+function reconcileLedger(records, fxRates = { EUR: 1.08, GBP: 1.28, USD: 1.0 }) {
+  const cleanRecords = [];
+  const deadLetterQueue = [];
+  let totalVolumeUsd = 0;
+
+  // 1. Deduplicate by tx_id (keep latest timestamp)
+  // 2. Reject records with missing account_id or negative amount to deadLetterQueue
+  // 3. Normalize currency strings (e.g. "usd", "USD$" -> "USD")
+  // 4. Calculate totalVolumeUsd normalized to base USD
+
+  return { cleanRecords, deadLetterQueue, totalVolumeUsd };
+}`;
+
+// ============================================================================
+// FDE FIELD MISSIONS: END-TO-END CLIENT DEPLOYMENT SIMULATOR
+// ============================================================================
+const FIELD_MISSIONS = [
+  {
+    id: "mission-fintech",
+    title: "Mission 1: Real-Time CDC & Fraud Ontology (Tier-1 Bank)",
+    client: "Global Commercial Bank (Core Banking Division)",
+    problem: "Core banking runs on a mainframe DB2 database with overnight batch balance reconciliation. Fraud detection teams cannot spot suspicious withdrawals until 24 hours later. The VP of Risk mandates sub-second fraud alerts without impacting the core transaction ledger.",
+    phases: [
+      {
+        phaseNum: 1,
+        title: "Discovery & Security Boundary",
+        subtitle: "Negotiate non-locking database access and secure the network perimeter.",
+        brief: "You meet with the Bank Information Security Committee. The DBAs fear transaction lockouts; the CISO requires PCI-DSS Level 1 compliance.",
+        question: "How do you capture live mutations without causing query locks on active accounts?",
+        choices: [
+          {
+            id: "m1-p1-a",
+            label: "Configure Debezium CDC to read the DB2 write-ahead log (WAL) with a read-only replication privilege, streaming into Kafka over mTLS.",
+            points: 100,
+            feedback: "Correct! Log-based CDC bypasses table locks completely and satisfies PCI-DSS auditing requirements."
+          },
+          {
+            id: "m1-p1-b",
+            label: "Install a Python script that polls SELECT * FROM accounts WHERE updated_at > NOW() - INTERVAL '5s'.",
+            points: 0,
+            feedback: "Disastrous: periodic polling executes table scans, locks rows, and crashes during peak morning trading."
+          }
+        ],
+        codeSnippet: `// Non-Invasive Debezium CDC Connector Config
+{
+  "name": "core-banking-wal-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.db2.Db2Connector",
+    "database.server.name": "bank_mainframe_prod",
+    "table.include.list": "BANK.ACCOUNTS,BANK.TRANSACTIONS",
+    "plugin.name": "db2_wal_cdc",
+    "database.history.kafka.bootstrap.servers": "kafka.internal:9092",
+    "database.history.kafka.topic": "schema-changes.banking"
+  }
+}`,
+        terminalOutput: `[INFO] Debezium connector 'core-banking-wal-cdc' registered.
+[INFO] Logical replication stream attached to WAL position 0x7F4A2B90.
+[INFO] Zero table locks acquired. Processing transaction events in <12ms.`
+      },
+      {
+        phaseNum: 2,
+        title: "Ingestion & Schema Reconciliation",
+        subtitle: "Handle schema drift and deduplicate streaming mutations.",
+        brief: "Legacy mainframe transactions contain variable-length EBCDIC strings and missing ISO currency codes. The stream must be normalized before indexing.",
+        question: "How do you handle sudden upstream schema drift when the bank adds a new regulatory reporting column?",
+        choices: [
+          {
+            id: "m1-p2-a",
+            label: "Use Confluent Schema Registry with FULL_TRANSITIVE compatibility and Avro serialization, routing unparseable payloads to a Dead Letter Queue (DLQ).",
+            points: 100,
+            feedback: "Spot on! Schema Registry guarantees backward and forward compatibility without dropping messages."
+          },
+          {
+            id: "m1-p2-b",
+            label: "Disable all validation and parse every payload as raw unquoted text.",
+            points: 10,
+            feedback: "Unacceptable: corrupted records will propagate into the fraud engine, throwing null pointer exceptions in production."
+          }
+        ],
+        codeSnippet: `// Schema Registry Compatibility Check & DLQ Routing
+const avro = require('avsc');
+const type = avro.Type.forSchema(accountSchema);
+
+function processCdcPayload(rawBuffer) {
+  try {
+    const record = type.fromBuffer(rawBuffer);
+    return { valid: true, record };
+  } catch (err) {
+    dlqProducer.send({ topic: 'banking.transactions.dlq', value: rawBuffer, error: err.message });
+    return { valid: false };
+  }
+}`,
+        terminalOutput: `[KAFKA] Consumer group 'fraud-ontology-ingest' rebalanced. 12 partitions assigned.
+[INGEST] Ingest throughput: 24,500 events/sec.
+[DLQ] 3 malformed legacy records routed to Dead Letter Queue with audit traces.`
+      },
+      {
+        phaseNum: 3,
+        title: "Pipeline & Inference Latency SLA",
+        subtitle: "Sink to ClickHouse and score fraud in under 65ms.",
+        brief: "Incoming transaction volume spikes to 18,000 transactions/second during peak trading. Fraud scores must be returned to the payment gateway before authorizing the transaction.",
+        question: "Which serving architecture satisfies the sub-65ms latency requirement under 18k events/sec load?",
+        choices: [
+          {
+            id: "m1-p3-a",
+            label: "Sink Kafka events into ClickHouse with Materialized Views for rolling window aggregations, evaluated by a containerized XGBoost microservice over gRPC.",
+            points: 100,
+            feedback: "Exemplary architecture: ClickHouse handles 100k+ inserts/sec effortlessly while gRPC keeps microservice inference well under 25ms."
+          },
+          {
+            id: "m1-p3-b",
+            label: "Write each transaction to a PostgreSQL table and query a remote OpenAI cloud endpoint for each transaction.",
+            points: 0,
+            feedback: "Violates latency SLA (cloud API takes 800ms+) and breaches banking privacy regulations."
+          }
+        ],
+        codeSnippet: `// ClickHouse Real-Time Fraud Aggregation View
+CREATE MATERIALIZED VIEW bank.recent_transfers_mv
+ENGINE = SummingMergeTree()
+PRIMARY KEY (account_id, toStartOfMinute(timestamp))
+AS SELECT 
+    account_id,
+    toStartOfMinute(timestamp) AS window_min,
+    count() AS tx_count,
+    sum(amount) AS total_volume
+FROM bank.transactions_queue
+GROUP BY account_id, window_min;`,
+        terminalOutput: `[CLICKHOUSE] Materialized view 'recent_transfers_mv' created.
+[BENCHMARK] P50 Latency: 18ms | P95 Latency: 38ms | P99 Latency: 58ms.
+[STATUS] SLA Breaches: 0.00% across 1,000,000 simulated events.`
+      },
+      {
+        phaseNum: 4,
+        title: "Executive Demo & Production Handover",
+        subtitle: "Run a live chaos test and sign off the operational runbook.",
+        brief: "The Client VP of Risk and Chief Enterprise Architect attend your final milestone demonstration. You must prove high availability and zero message loss during a simulated datacenter network partition.",
+        question: "How do you conduct the live chaos failover demonstration for the bank leadership?",
+        choices: [
+          {
+            id: "m1-p4-a",
+            label: "Simulate killing a primary Kafka broker node live, demonstrating automated leader election and zero transaction loss via consumer lag metrics.",
+            points: 100,
+            feedback: "The gold standard of enterprise FDE demos: proves resilience under fire and wins executive signoff."
+          },
+          {
+            id: "m1-p4-b",
+            label: "Show a PowerPoint presentation with conceptual diagrams without running any real tests.",
+            points: 20,
+            feedback: "Executives demand proof in live software, not static slide decks."
+          }
+        ],
+        codeSnippet: `# Automated Disaster Recovery & Handover Sign-off Runbook
+./scripts/chaos_kill_broker.sh --node kafka-broker-02
+# Verify consumer lag recovers to 0:
+kafka-consumer-groups --bootstrap-server 10.240.0.5:9092 --describe --group fraud-ontology-ingest
+# Generate signed SLA acceptance artifact:
+./scripts/generate_sla_acceptance_report.sh --tenant global-bank > signoff_report.pdf`,
+        terminalOutput: `[CHAOS] Simulated node kill: kafka-broker-02 [STOPPED]
+[ELECTION] Partition leaders reassigned in 180ms.
+[VERIFICATION] Consumer lag: 0 records dropped. Data integrity 100.0%.
+[ACCEPTED] Client VP signed off: Deployment approved for production cutover.`
+      }
+    ]
+  },
+  {
+    id: "mission-defense",
+    title: "Mission 2: Defense Air-Gapped Multi-Modal Intelligence Platform",
+    client: "Aerospace Maintenance & Logistics Depot",
+    problem: "1.5 million legacy scanned maintenance schematics, technical orders, and avionics sensor logs are siloed inside an underground bunker with zero internet connectivity. Field technicians spend 4+ hours diagnosing common avionics faults.",
+    phases: [
+      {
+        phaseNum: 1,
+        title: "Enclave Setup & Media Validation",
+        subtitle: "Import container images and model weights via cryptographic verification.",
+        brief: "You arrive at the classified facility. The security gate inspects physical hardware and requires cryptographic validation before mounting drives.",
+        question: "How do you verify software packages at the air-gap hardware gate?",
+        choices: [
+          {
+            id: "m2-p1-a",
+            label: "Execute sha256sum validation against pre-signed cryptographic manifest hashes and load images into the internal Harbor registry.",
+            points: 100,
+            feedback: "Perfect compliance: ensures zero file corruption or unauthorized tampering during physical transit."
+          },
+          {
+            id: "m2-p1-b",
+            label: "Insert personal consumer USB thumb drives directly into production bunker servers without scanning.",
+            points: 0,
+            feedback: "Immediate security violation resulting in badge revocation and security escort off premises."
+          }
+        ],
+        codeSnippet: `#!/usr/bin/env bash
+# Air-Gap Checksum Verification Script
+echo "==> Verifying model weights SHA-256..."
+sha256sum -c /mnt/airgap_media/manifest.sha256
+docker load -i /mnt/airgap_media/fde_airgap_bundle.tar
+docker tag internal/vllm:v0.4.2 harbor.depot.internal/fde/vllm:v0.4.2
+docker push harbor.depot.internal/fde/vllm:v0.4.2`,
+        terminalOutput: `[SECURITY] SHA-256 verification PASSED for 18 chunks.
+[HARBOR] Image harbor.depot.internal/fde/vllm:v0.4.2 pushed successfully.
+[PERIMETER] Air-gap network enclave status: ISOLATED (Egress: 0 bytes).`
+      },
+      {
+        phaseNum: 2,
+        title: "Air-Gapped OCR & Vector Indexing",
+        subtitle: "Parse 1.5M technical orders into hybrid vector embeddings.",
+        brief: "Schematics are scanned PDFs with hand-drawn wire schematics and OCR noise. Text must be extracted and indexed locally.",
+        question: "What pipeline architecture achieves high semantic recall on technical aerospace schematics?",
+        choices: [
+          {
+            id: "m2-p1-a",
+            label: "Containerized PaddleOCR/Tesseract with BAAI/BGE dense embeddings indexed into an air-gapped Qdrant cluster using Reciprocal Rank Fusion (RRF).",
+            points: 100,
+            feedback: "Outstanding: combines optical extraction with hybrid keyword and semantic retrieval with zero cloud dependency."
+          },
+          {
+            id: "m2-p1-b",
+            label: "Run basic Linux grep over file names without extracting text from inside the PDFs.",
+            points: 10,
+            feedback: "Useless for technician questions like 'hydraulic actuator pressure drop wiring diagram'."
+          }
+        ],
+        codeSnippet: `// Hybrid RRF Search Query in Qdrant Local Cluster
+const searchResults = await qdrant.query({
+  collection_name: 'technical_orders',
+  prefetch: [
+    { query: textEmbeddingVector, using: 'dense', limit: 20 },
+    { query: bm25SparseTokens, using: 'sparse', limit: 20 }
+  ],
+  query: { rrf: { k: 60 } },
+  limit: 5
+});`,
+        terminalOutput: `[OCR] Processed 12,500 legacy PDF schematics in parallel worker pool.
+[EMBED] Generated 480,000 dense vector chunks (dim: 1024).
+[QDRANT] Collection 'technical_orders' optimized. HNSW graph built.`
+      },
+      {
+        phaseNum: 3,
+        title: "Offline LLM Serving & Structured Tool-Calling",
+        subtitle: "Deploy quantized Llama-3-70B on internal NVIDIA A100 GPUs.",
+        brief: "The facility has dual NVIDIA A100 (80GB) workstations. Technicians need conversational answers that cite exact technical order paragraph numbers.",
+        question: "How do you configure vLLM to serve concurrent queries without Out-Of-Memory (OOM) crashes?",
+        choices: [
+          {
+            id: "m2-p3-a",
+            label: "Serve Llama-3-70B-Instruct in AWQ 4-bit quantization with tensor-parallelism=2 and gpu-memory-utilization=0.90 with strict PagedAttention KV allocation.",
+            points: 100,
+            feedback: "Flawless: fits comfortably inside dual 80GB VRAM, leaving ample room for 8k token context across concurrent technician queries."
+          },
+          {
+            id: "m2-p3-b",
+            label: "Run unquantized FP32 model weights on a single desktop GPU.",
+            points: 0,
+            feedback: "Instant CUDA OOM crash: 70B in FP32 requires 280GB+ of VRAM."
+          }
+        ],
+        codeSnippet: `# vLLM Offline Launch Command with Zero Telemetry
+python3 -m vllm.entrypoints.openai.api_server \\
+  --model /models/Llama-3-70B-Instruct-AWQ \\
+  --quantization awq \\
+  --tensor-parallel-size 2 \\
+  --max-model-len 8192 \\
+  --gpu-memory-utilization 0.90 \\
+  --enforce-eager`,
+        terminalOutput: `[VLLM] PagedAttention initialized with 32,768 memory blocks.
+[VLLM] Time-to-first-token (TTFT): 320ms.
+[INFERENCE] Streaming tokens at 48.5 tokens/sec per stream.`
+      },
+      {
+        phaseNum: 4,
+        title: "Flightline Technician Trial & Sign-Off",
+        subtitle: "Put tablets in technicians' hands and verify 2-second diagnostic retrieval.",
+        brief: "Active duty maintenance crews test the platform during an engine change inspection. The depot commander observes the trial.",
+        question: "A technician asks: 'Where is the backup ground wire for the APU starter generator on Tail #402?' How does the system respond?",
+        choices: [
+          {
+            id: "m2-p4-a",
+            label: "Returns exact schematic snippet highlighting Terminal Post 4B with direct link to Technical Order 1F-16C-2-00GV-00-1 Section 3.4.2 in 1.4 seconds.",
+            points: 100,
+            feedback: "Mission Success! The depot commander confirms diagnostic time dropped from 4 hours to 90 seconds. Operational signoff granted."
+          },
+          {
+            id: "m2-p4-b",
+            label: "Generates a vague poetic essay about avionics without citing specific wire numbers or manuals.",
+            points: 0,
+            feedback: "Unacceptable in aviation maintenance where strict compliance with technical orders is a legal and safety mandate."
+          }
+        ],
+        codeSnippet: `// Technician Tablet Response Payload
+{
+  "tail_number": "TAIL-402",
+  "component": "APU Starter Generator",
+  "ground_wire_post": "Terminal Post 4B (Junction Box 12A)",
+  "technical_order": "TO-1F-16C-2-00GV",
+  "page_reference": "Section 3.4.2, Page 144",
+  "latency_ms": 1420,
+  "confidence_score": 0.984
+}`,
+        terminalOutput: `[TRIAL] 24 maintenance crew queries evaluated.
+[ACCURACY] 100% technical order citations verified against physical binders.
+[COMMAND] Depot Commander signed STIG security accreditation artifact.`
+      }
+    ]
+  },
+  {
+    id: "mission-healthcare",
+    title: "Mission 3: Healthcare Hospital Network Clinical Data Fusion",
+    client: "Regional Health Authority (14 Hospitals)",
+    problem: "Two major hospitals use Epic, four use Cerner, and community clinics use legacy SQL systems. Patient matching error rate is 14%, leading to duplicate records, missed allergies, and billing delays. Clinicians lack a unified patient chart.",
+    phases: [
+      {
+        phaseNum: 1,
+        title: "HIPAA/BAA Scoping & FHIR Mapping",
+        subtitle: "Audit disparate HL7 feeds and establish data governance.",
+        brief: "You conduct discovery across 14 hospital IT departments. Network firewalls isolate hospital subnets; patient identifiers are mismatched.",
+        question: "How do you unify clinical feeds across 14 hospitals while strictly complying with HIPAA privacy rules?",
+        choices: [
+          {
+            id: "m3-p1-a",
+            label: "Deploy lightweight edge containers inside each hospital DMZ to de-identify and transform HL7 v2 and FHIR v4 streams into a canonical schema before routing over private mTLS tunnels.",
+            points: 100,
+            feedback: "Exemplary healthcare FDE strategy: local de-identification preserves privacy while edge parsing prevents heavy WAN load."
+          },
+          {
+            id: "m3-p1-b",
+            label: "Ask hospital clerks to email unencrypted spreadsheets of patient medical records to your Gmail account.",
+            points: 0,
+            feedback: "Severe federal HIPAA violation leading to major fines and immediate criminal investigation."
+          }
+        ],
+        codeSnippet: `// Canonical FHIR v4 Observation Normalizer
+function normalizeVitals(rawHl7Segment) {
+  return {
+    resourceType: "Observation",
+    status: "final",
+    category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "vital-signs" }] }],
+    code: { coding: [{ system: "http://loinc.org", code: "8867-4", display: "Heart rate" }] },
+    subject: { reference: \`Patient/\${rawHl7Segment.patient_hash}\` },
+    valueQuantity: { value: parseFloat(rawHl7Segment.obx_5), unit: "beats/minute" }
+  };
+}`,
+        terminalOutput: `[FHIR] Normalized 84,000 raw HL7 messages/hour.
+[PRIVACY] Zero raw SSNs or names transmitted over WAN.
+[TUNNEL] 14 hospital mTLS IPsec tunnels connected.`
+      },
+      {
+        phaseNum: 2,
+        title: "Deterministic & Probabilistic Entity Resolution",
+        subtitle: "Execute Fellegi-Sunter record linkage to drop mismatch rate from 14% to 0.4%.",
+        brief: "Patients named 'Robert Smith' and 'Bob Smith' with identical DOB and transposed SSN digits must be deduplicated accurately.",
+        question: "What entity resolution methodology solves patient record fragmentation across disparate EHRs?",
+        choices: [
+          {
+            id: "m3-p2-a",
+            label: "A two-pass Fellegi-Sunter model: Pass 1 (exact SSN/DOB deterministic match); Pass 2 (probabilistic phonetic Metaphone + Jaro-Winkler address vector matching).",
+            points: 100,
+            feedback: "Industry gold standard: drops patient mismatch rate from 14% to 0.38% with full clinical auditability."
+          },
+          {
+            id: "m3-p2-b",
+            label: "Merge any records that share the same last name.",
+            points: 0,
+            feedback: "Catastrophic clinical danger: merges unrelated patients, creating fatal medication and allergy confusion."
+          }
+        ],
+        codeSnippet: `// Fellegi-Sunter Probabilistic Patient Linkage
+function calculateMatchWeight(recordA, recordB) {
+  let weight = 0;
+  if (recordA.dob === recordB.dob) weight += 12.5;
+  if (recordA.ssn_hash === recordB.ssn_hash) weight += 25.0;
+  if (metaphone(recordA.lastName) === metaphone(recordB.lastName)) weight += 8.0;
+  
+  const jaroDist = jaroWinkler(recordA.address, recordB.address);
+  if (jaroDist > 0.85) weight += 6.5;
+
+  return weight > 35.0 ? 'AUTO_MERGE' : (weight > 20.0 ? 'CLINICAL_REVIEW' : 'DISTINCT');
+}`,
+        terminalOutput: `[MPI] Evaluated 1,240,000 patient pairs across 14 hospitals.
+[REDUCTION] Mismatch error rate reduced from 14.2% down to 0.38%.
+[AUDIT] 42 borderline cases routed to hospital health informatics review queue.`
+      },
+      {
+        phaseNum: 3,
+        title: "Clinical Ontology & Writeback Safety Gates",
+        subtitle: "Construct Palantir AIP-style patient graph with human-in-the-loop validation.",
+        brief: "Doctors need real-time ICU bed scheduling and sepsis risk alerting. However, automated AI writes must never overwrite clinical EHR records without doctor confirmation.",
+        question: "How do you enforce writeback safety when scheduling emergency ICU bed reallocations?",
+        choices: [
+          {
+            id: "m3-p3-a",
+            label: "Implement a validated Action Type: the AI suggests the bed reallocation, but the action requires the attending physician's biometric badge sign-off before dispatching writeback to Epic/Cerner.",
+            points: 100,
+            feedback: "Perfect clinical governance: empowers clinicians with real-time AI insight while keeping ultimate authority in human hands."
+          },
+          {
+            id: "m3-p3-b",
+            label: "Let an unsupervised background script automatically discharge patients when beds run low.",
+            points: 0,
+            feedback: "Extremely dangerous and illegal: clinical decisions must always maintain a licensed human-in-the-loop."
+          }
+        ],
+        codeSnippet: `// Palantir OSDK Clinical Bed Reallocation Action with Gate
+export const ReallocateIcuBedAction = {
+  apiName: 'reallocateIcuBed',
+  validate: async (ctx, params) => {
+    if (!ctx.user.roles.includes('ATTENDING_PHYSICIAN')) {
+      return { valid: false, reason: 'Only attending physicians may authorize ICU bed reallocation.' };
+    }
+    return { valid: true };
+  },
+  execute: async (ctx, params) => {
+    await ctx.ontology.actions.updateBedStatus(params);
+    await ctx.ehrBridge.dispatchWriteback({ patientId: params.patientId, targetBed: params.targetBed });
+  }
+};`,
+        terminalOutput: `[ONTOLOGY] Patient graph compiled: 140,000 Patient objects with 1.2M ClinicalEncounter links.
+[GATES] Writeback audit gate active: 100% of mutations require physician sign-off.
+[LATENCY] Graph navigation queries responding in <42ms.`
+      },
+      {
+        phaseNum: 4,
+        title: "Bedside Nurse Trial & Hospital Go-Live",
+        subtitle: "Trial in ICU ward and hand over self-healing runbook to hospital staff.",
+        brief: "ICU charge nurses test the single pane of glass during shift handover. The hospital CIO observes bed allocation responsiveness.",
+        question: "How does the platform handle an unexpected network disconnect between Hospital 7 and the central authority?",
+        choices: [
+          {
+            id: "m3-p4-a",
+            label: "Hospital 7 edge nodes switch seamlessly to local offline mode using SQLite/DuckDB cache, queuing updates locally and resyncing via vector clocks upon reconnection.",
+            points: 100,
+            feedback: "Resilient offline-first FDE design! Nurses never experience UI freezes even during hospital fiber cuts."
+          },
+          {
+            id: "m3-p4-b",
+            label: "The bedside tablet displays a blank white screen with an unhandled network error.",
+            points: 0,
+            feedback: "Critical failure during patient care; nurses will abandon the software."
+          }
+        ],
+        codeSnippet: `// Resilient Offline-First Edge Sync Worker
+async function dispatchClinicalUpdate(event) {
+  if (!navigator.onLine) {
+    await localOfflineDb.queue.put({ ...event, queuedAt: Date.now() });
+    showOfflineBadge("Operating on local edge cache. Will sync automatically upon reconnection.");
+    return { status: 'STORED_OFFLINE' };
+  }
+  return await remoteHospitalApi.send(event);
+}`,
+        terminalOutput: `[ICU TRIAL] 48-hour continuous trial complete across 60 hospital beds.
+[HANDOVER] Shift handover preparation time reduced from 45 mins to 6 mins per nurse.
+[SIGN-OFF] Chief Medical Officer and CIO signed 3-year enterprise expansion agreement.`
+      }
+    ]
+  }
+];
+
+// ============================================================================
+// COMPANY-SPECIFIC INTERVIEW DOSSIERS
+// ============================================================================
+const COMPANY_DOSSIERS = [
+  {
+    company: "Palantir Technologies",
+    role: "Forward Deployed Software Engineer (Foundry / AIP / Gotham)",
+    comp: "$190,000 - $350,000+ Total Comp (High Base + Liquid Equity + Travel Stipends)",
+    sectors: "Defense, Intelligence, Commercial Enterprise, Healthcare",
+    interviewLoop: [
+      "1. Technical Recruiter Screen (Resume impact, willingness to travel 25-50%, customer empathy).",
+      "2. Algorithmic Coding Challenge (Data structures, stream processing, edge-case resilience).",
+      "3. Deployed System Architecture (FDE Design: dirty data, legacy APIs, on-prem air-gap constraints).",
+      "4. Decomposition & Scoping Interview (Break down ambiguous customer problem into engineering tasks).",
+      "5. Executive Cultural Onsite (Demonstrating urgency, ownership, and client diplomatic presence)."
+    ],
+    techStack: "TypeScript, Python, Java/Go, Palantir OSDK, Docker, K8s, PostgreSQL, ClickHouse, Apache Spark",
+    fdeSecret: "Palantir values ruthless ownership and client presence above theoretical elegance. Be ready to explain how you de-escalate resistant DBAs and ship working software in 48 hours."
+  },
+  {
+    company: "Scale AI",
+    role: "Forward Deployed Engineer (Enterprise GenAI / Public Sector)",
+    comp: "$180,000 - $320,000+ Total Comp",
+    sectors: "Autonomous Vehicles, Defense/DoD, Enterprise LLM Customization",
+    interviewLoop: [
+      "1. Recruiter Screen (Past work with AI models and fast-paced customer deployments).",
+      "2. Python & ML Engineering Coding Round (Vector math, embeddings, batching pipelines).",
+      "3. Applied RAG & LLM Evaluation Architecture (Building reliable evaluation harnesses and hallucination guards).",
+      "4. Customer Simulation Case Study (Scoping an enterprise data curation pipeline under tight deadlines)."
+    ],
+    techStack: "Python, PyTorch, vLLM, Qdrant/Pinecone, Docker, FastAPI, Kubernetes",
+    fdeSecret: "Emphasize quantitative evaluation (RAG Triad, LLM-as-a-judge) rather than just calling OpenAI endpoints."
+  },
+  {
+    company: "Databricks",
+    role: "Solutions Architect / Forward Deployed Specialist (Mosaic AI)",
+    comp: "$185,000 - $310,000 Total Comp + Significant Pre-IPO Equity",
+    sectors: "Financial Services, Retail, Healthcare, Manufacturing",
+    interviewLoop: [
+      "1. Technical Screen (Distributed data processing, Spark internals, SQL optimization).",
+      "2. Live Architecture Defense (Designing a Lakehouse streaming architecture with Delta Lake).",
+      "3. Hands-On Coding & ETL Optimization (Delta Live Tables, CDC ingestion, partition tuning).",
+      "4. Executive Communication Round (Explaining Lakehouse ROI to skeptical CIOs)."
+    ],
+    techStack: "Apache Spark, Delta Lake, Python, SQL, MLflow, Mosaic AI, Cloud Data Warehouses",
+    fdeSecret: "Understand Spark streaming shuffle bottlenecks, broadcast joins, and Delta ACID transaction guarantees inside out."
+  },
+  {
+    company: "Anduril Industries",
+    role: "Deployment Engineer (Lattice OS / Hardware & Edge Defense)",
+    comp: "$175,000 - $300,000 Total Comp + Substantial Equity",
+    sectors: "Defense, Autonomous Systems, Border & Maritime Surveillance",
+    interviewLoop: [
+      "1. Recruiter & Security Clearance Check (US Secret/Top Secret eligibility).",
+      "2. Systems & Linux Internals Coding Round (C++, Rust, or Python networking and cgroups).",
+      "3. Edge Topology Architecture (Low-bandwidth mesh networks, intermittent connectivity, sensor fusion).",
+      "4. Tactical Field Scenario (Debugging a sensor pod in 100°F desert heat with no internet)."
+    ],
+    techStack: "C++, Rust, Python, Go, Linux Kernels, gRPC, Docker, Embedded Systems, RTSP Video",
+    fdeSecret: "Anduril tests for hardware-software grit. Show that you can open a terminal in a field hangar and troubleshoot Linux networking without Google."
+  },
+  {
+    company: "C3 AI",
+    role: "Forward Deployed Applications Engineer",
+    comp: "$150,000 - $260,000 Total Comp",
+    sectors: "Oil & Gas, Energy Management, Aerospace, Defense",
+    interviewLoop: [
+      "1. Technical Screener (OOP principles, enterprise data modeling).",
+      "2. Data Processing Drill (Time-series data, sensor telemetry, anomaly detection).",
+      "3. Enterprise System Design (Predictive maintenance architectures).",
+      "4. Customer Project Delivery Simulation (Managing client scope changes)."
+    ],
+    techStack: "JavaScript, Python, C3 AI Type System, Postgres, Cassandra, Kubernetes",
+    fdeSecret: "Demonstrate strong object-oriented domain modeling and experience with time-series sensor anomalies."
+  }
+];
+
+// ============================================================================
+// EXECUTIVE COLD OUTREACH SCRIPT LIBRARY
+// ============================================================================
+const OUTREACH_SCRIPTS = [
+  {
+    id: "outreach-vp-eng",
+    target: "VP of Engineering / Head of Forward Deployed Engineering",
+    subject: "FDE Ingestion & Air-Gap Resilience (Saw your team's work on [Client Sector])",
+    body: `Hi [First Name],
+
+I saw [Company]'s recent deployment for [Client/Industry]—navigating on-prem legacy database constraints while streaming real-time mutations is notoriously tough.
+
+I’m a Forward Deployed Engineer specializing in air-gapped container topologies, non-invasive log-based CDC (Debezium/Kafka), and on-premise LLM inference with vLLM. Recently, I architected an offline clinical data reconciler that reduced patient record mismatches from 14% to 0.4% across 14 disparate hospital EHRs without cloud egress.
+
+I’ve built an open-source proof-of-deployment repository demonstrating air-gapped hybrid RAG and zero-table-lock database extraction.
+
+Would you be open to a 10-minute technical exchange next Tuesday afternoon?
+
+Best regards,
+[Your Name]
+[GitHub / Portfolio Link]`
+  },
+  {
+    id: "outreach-recruiter",
+    target: "Technical Recruiter (FDE / Solutions Track)",
+    subject: "Candidate for Forward Deployed Software Engineer role at [Company]",
+    body: `Hi [First Name],
+
+I noticed [Company] is actively expanding its Forward Deployed Engineering team to support enterprise and defense customer deployments.
+
+My background sits at the intersection of production systems engineering and customer-facing technical delivery:
+• Hands-on production experience with containerized air-gapped clusters (K3s, Helm, vLLM AWQ quantization).
+• Real-time data pipeline architecture using log-based CDC, ClickHouse, and Apache Kafka.
+• Proven track record aligning technical architectures with client DBAs and CISOs under 30-day POC timelines.
+
+I am actively interviewing for FDE roles and would love to connect for a quick introductory conversation regarding open opportunities at [Company].
+
+Best,
+[Your Name]
+[Phone Number] · [LinkedIn Link]`
+  },
+  {
+    id: "outreach-lead",
+    target: "Lead / Principal Forward Deployed Engineer",
+    subject: "Question regarding [Company]'s on-prem deployment topology",
+    body: `Hi [First Name],
+
+I’ve been following your engineering blog posts on deploying [Company Product] into heterogeneous customer bastions.
+
+I’m currently drilling deep into Palantir-style Kinetic Ontology modeling and non-locking writeback validation gates. I was curious how your team handles schema drift when enterprise customers modify database columns unannounced—do you mandate Avro Schema Registry FULL_TRANSITIVE rules, or maintain compensatory shadow tables?
+
+I’ve put together an open-source test harness modeling these exact edge cases and would genuinely love to hear your perspective if you have 10 minutes for a virtual coffee.
+
+Thanks for your time,
+[Your Name]`
+  },
+  {
+    id: "outreach-alumni",
+    target: "Company Alumni / Internal Referral Connection",
+    subject: "Fellow [University / Prior Company] alum exploring FDE at [Company]",
+    body: `Hi [First Name],
+
+I hope you’re doing well! I saw that you transitioned from [Prior Company/University] to [Current Company] as a Forward Deployed Engineer.
+
+I’m currently preparing for FDE interviews across enterprise AI organizations, focusing on air-gapped model serving, client stakeholder diplomacy, and streaming telemetry.
+
+How has your experience been balancing onsite client deployments with core platform contributions? If your schedule allows, I’d love to ask you 2-3 quick questions about the team culture and interview loop.
+
+Warm regards,
+[Your Name]`
+  }
+];
+
+// ============================================================================
+// INTERACTIVE FIELD TERMINAL SIMULATOR: 12 BASTION DIAGNOSTIC DRILLS
+// ============================================================================
+const TERMINAL_DRILLS = [
+  {
+    id: "drill-1",
+    category: "Network Diagnostics",
+    prompt: "Check if port 5432 on internal host 10.200.4.12 is listening and accessible using netcat (nc) with a 2-second timeout.",
+    hint: "Try: nc -zv -w 2 10.200.4.12 5432",
+    validate: (cmd) => cmd.includes("nc") && cmd.includes("10.200.4.12") && cmd.includes("5432"),
+    successOutput: `Connection to 10.200.4.12 5432 port [tcp/postgresql] succeeded!\n[DRILL PASSED] Port 5432 is OPEN and reachable.`
+  },
+  {
+    id: "drill-2",
+    category: "Corporate SSL/TLS Inspection",
+    prompt: "Inspect the remote SSL certificate presented by internal proxy bastion.internal:443 using openssl to check if corporate proxy MITM interception is active.",
+    hint: "Try: openssl s_client -connect bastion.internal:443 -showcerts",
+    validate: (cmd) => cmd.includes("openssl") && cmd.includes("s_client") && cmd.includes("bastion.internal:443"),
+    successOutput: `CONNECTED(00000003)\ndepth=1 C = US, O = AcmeCorp, CN = AcmeCorp Internal Inspection CA\nverify return:1\n[DRILL PASSED] Corporate CA identified. Remember to mount corporate CA into container.`
+  },
+  {
+    id: "drill-3",
+    category: "Docker Air-Gap Diagnostics",
+    prompt: "Inspect the IP address and network settings of the container named 'fde-ingest-worker' using docker inspect.",
+    hint: "Try: docker inspect fde-ingest-worker",
+    validate: (cmd) => cmd.includes("docker inspect") && cmd.includes("fde-ingest-worker"),
+    successOutput: `[\n  {\n    "Id": "a7b9c1d2e3f4",\n    "NetworkSettings": {\n      "IPAddress": "172.28.0.4",\n      "Gateway": "172.28.0.1",\n      "Ports": { "8080/tcp": [{ "HostPort": "8080" }] }\n    }\n  }\n]\n[DRILL PASSED] Container network verified on internal bridge 172.28.0.4.`
+  },
+  {
+    id: "drill-4",
+    category: "Database Concurrency Triage",
+    prompt: "Find all active database queries running for more than 5 seconds using PostgreSQL pg_stat_activity.",
+    hint: "Try: SELECT pid, query, age(clock_timestamp(), query_start) FROM pg_stat_activity WHERE state != 'idle';",
+    validate: (cmd) => (cmd.includes("pg_stat_activity") || cmd.includes("SELECT") || cmd.includes("psql")),
+    successOutput: ` pid  | state  |      age       | query\n------+--------+----------------+-------------------------------------------------\n 4210 | active | 00:00:14.28192 | SELECT * FROM legacy_ledger WHERE status = 'PENDING'\n(1 row)\n[DRILL PASSED] Long-running query PID 4210 identified for termination.`
+  },
+  {
+    id: "drill-5",
+    category: "JSON Data Wrangling",
+    prompt: "Extract the value of the 'error_code' field from telemetry.json using jq.",
+    hint: "Try: jq '.error_code' telemetry.json or cat telemetry.json | jq .error_code",
+    validate: (cmd) => cmd.includes("jq") && (cmd.includes("error_code") || cmd.includes(".")),
+    successOutput: `"ERR_AIRGAP_SOCKET_TIMEOUT"\n[DRILL PASSED] Successfully extracted error code.`
+  },
+  {
+    id: "drill-6",
+    category: "Air-Gap Disk Space Audit",
+    prompt: "Check disk space utilization across all mounted filesystems in human-readable format using df.",
+    hint: "Try: df -h",
+    validate: (cmd) => cmd.trim() === "df -h" || cmd.includes("df"),
+    successOutput: `Filesystem      Size  Used Avail Use% Mounted on\n/dev/nvme0n1p1  1.8T  420G  1.3T  25% /\n/dev/sda1       500G  485G   15G  97% /data/models\n[DRILL PASSED] /data/models disk is at 97% capacity! Warning logged.`
+  },
+  {
+    id: "drill-7",
+    category: "Log Parsing & Regex",
+    prompt: "Search the container log file /var/log/app.log for any lines containing 'FATAL' or 'PANIC' using grep with line numbers.",
+    hint: "Try: grep -En 'FATAL|PANIC' /var/log/app.log",
+    validate: (cmd) => cmd.includes("grep") && (cmd.includes("FATAL") || cmd.includes("PANIC")),
+    successOutput: `142:[2026-10-24 08:14:12] FATAL: Postgres Logical replication slot dropped by remote master.\n[DRILL PASSED] Located fatal exception at line 142.`
+  },
+  {
+    id: "drill-8",
+    category: "Linux Process & OOM Triage",
+    prompt: "Kill the stuck Python worker process with PID 8412 immediately using signal 9 (SIGKILL).",
+    hint: "Try: kill -9 8412",
+    validate: (cmd) => (cmd.includes("kill") && cmd.includes("8412")),
+    successOutput: `[PROCESS] Terminated PID 8412 with SIGKILL (Code 137).\n[DRILL PASSED] Process successfully terminated, freeing 8GB memory.`
+  },
+  {
+    id: "drill-9",
+    category: "Permissions & File Security",
+    prompt: "Ensure the private SSH key at ~/.ssh/fde_bastion_key is strictly read-only by the owner (mode 600) using chmod.",
+    hint: "Try: chmod 600 ~/.ssh/fde_bastion_key",
+    validate: (cmd) => cmd.includes("chmod 600") && cmd.includes("fde_bastion_key"),
+    successOutput: `-rw------- 1 analyst analyst 2602 Oct 24 08:30 /home/analyst/.ssh/fde_bastion_key\n[DRILL PASSED] Key permissions secured to 600. SSH will accept key.`
+  },
+  {
+    id: "drill-10",
+    category: "vLLM Offline Health Probe",
+    prompt: "Query the local offline vLLM server at http://127.0.0.1:8000/v1/models using curl to verify loaded model weights.",
+    hint: "Try: curl -s http://127.0.0.1:8000/v1/models",
+    validate: (cmd) => cmd.includes("curl") && cmd.includes("8000") && cmd.includes("models"),
+    successOutput: `{\n  "object": "list",\n  "data": [\n    { "id": "Meta-Llama-3-70B-Instruct-AWQ", "object": "model", "owned_by": "vllm" }\n  ]\n}\n[DRILL PASSED] vLLM server is healthy with Llama-3-70B loaded.`
+  },
+  {
+    id: "drill-11",
+    category: "Network Listening Ports",
+    prompt: "List all TCP listening ports with associated process names using netstat or ss.",
+    hint: "Try: netstat -tlpn or ss -tlpn",
+    validate: (cmd) => (cmd.includes("netstat") || cmd.includes("ss")) && (cmd.includes("t") || cmd.includes("l")),
+    successOutput: `Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name\ntcp        0      0 127.0.0.1:8000          0.0.0.0:*               LISTEN      1420/python3\ntcp        0      0 0.0.0.0:5432            0.0.0.0:*               LISTEN      890/postgres\n[DRILL PASSED] Verified active listening sockets.`
+  },
+  {
+    id: "drill-12",
+    category: "Tarball Integrity Check",
+    prompt: "Verify the SHA-256 checksum of the offline bundle airgap_images.tar.gz against its checksum file airgap_images.tar.gz.sha256.",
+    hint: "Try: sha256sum -c airgap_images.tar.gz.sha256",
+    validate: (cmd) => cmd.includes("sha256sum") && (cmd.includes("-c") || cmd.includes("sha256")),
+    successOutput: `airgap_images.tar.gz: OK\n[DRILL PASSED] Cryptographic integrity 100% verified. Safe to load into registry.`
+  }
+];
+
+// ============================================================================
 // 2. OFFLINE PERSISTENCE: INDEXEDDB WITH LOCALSTORAGE FALLBACK
 // ============================================================================
 class OfflineStorageManager {
@@ -1177,6 +2623,23 @@ const AppState = {
   pomoInterval: null,
   studyStreakDays: 5,
 
+  // Stakeholder Crucible & DoD
+  activeCrucibleScenario: "dba-standoff",
+  crucibleSelectedChoices: {},
+  dodChecks: {},
+
+  // Field Missions & Take-Home
+  activeMissionId: "mission-fintech",
+  missionActivePhase: 1,
+  missionChoices: {},
+  takehomeTimeLeft: 3 * 3600,
+  takehomeRunning: false,
+  takehomeTimerInterval: null,
+  takehomeScore: 0,
+
+  // Interactive Terminal Simulator
+  currentTerminalDrillIndex: 0,
+
   // PWA
   deferredInstallPrompt: null,
   isOnline: navigator.onLine
@@ -1354,17 +2817,26 @@ async function initAppData() {
   // Initialize Scenario
   AppState.activeScenario = AppState.catalog.architectureScenarios[0];
 
+  // Initialize DoD Checklist & Terminal
+  await initDodChecklist();
+  initTerminalSimulator();
+
   renderAllViews();
 }
 
 function renderAllViews() {
   renderOverviewSection();
   renderModulesGrid();
+  renderEnterpriseResources();
   renderFlashcards();
   renderPuzzles();
   renderCodingChallenge();
   renderScenario();
+  initTakehomeSimulator();
+  renderFieldMissions();
   renderKanbanBoard();
+  renderCompanyDossiers();
+  renderOutreachScripts();
   renderPortfolio();
   renderResumeAuditor();
   renderNotes();
@@ -1381,6 +2853,9 @@ function renderOverviewSection() {
   renderArchetypeQuiz();
   renderRoleMatrix();
   renderCareerLadder();
+  renderStakeholderCrucible();
+  renderComplianceTiers();
+  renderDodChecklist();
 }
 
 // --- 0A: Day-in-the-Life Simulator ---
@@ -1653,6 +3128,707 @@ function selectCareerTier(tierId) {
   renderCareerLadder();
 }
 window.selectCareerTier = selectCareerTier;
+
+// ============================================================================
+// STAKEHOLDER CRUCIBLE & DE-ESCALATION SIMULATOR
+// ============================================================================
+function renderStakeholderCrucible() {
+  const tabsContainer = document.getElementById("crucible-tabs-container");
+  const cardContainer = document.getElementById("crucible-scenario-card");
+  if (!tabsContainer || !cardContainer) return;
+
+  // Tabs
+  tabsContainer.innerHTML = CRUCIBLE_SCENARIOS.map(s => {
+    const isActive = AppState.activeCrucibleScenario === s.id;
+    return `
+      <button class="crucible-tab-btn ${isActive ? 'active' : ''}" onclick="selectCrucibleScenario('${s.id}')">
+        ${s.title}
+      </button>
+    `;
+  }).join("");
+
+  // Active Scenario
+  const scenario = CRUCIBLE_SCENARIOS.find(s => s.id === AppState.activeCrucibleScenario) || CRUCIBLE_SCENARIOS[0];
+  const selectedChoiceId = AppState.crucibleSelectedChoices[scenario.id];
+  const selectedChoice = scenario.choices.find(c => c.id === selectedChoiceId);
+
+  cardContainer.innerHTML = `
+    <div class="crucible-scenario-header">
+      <div>
+        <div class="crucible-stakeholder-badge">${scenario.stakeholder}</div>
+        <h3 class="card-title" style="margin-top: 0.25rem;">${scenario.title}</h3>
+      </div>
+      <span class="tag-badge" style="color: var(--accent-amber);">High-Pressure Field Scoping</span>
+    </div>
+
+    <div class="crucible-quote">"${scenario.quote}"</div>
+
+    <p style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;">
+      <strong>Field Context:</strong> ${scenario.context}
+    </p>
+
+    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 0.5rem;">
+      Choose your FDE strategic response:
+    </div>
+
+    <div class="crucible-choices">
+      ${scenario.choices.map((choice, idx) => {
+        const isSelected = selectedChoiceId === choice.id;
+        return `
+          <button class="crucible-choice-btn ${isSelected ? 'selected' : ''}" onclick="selectCrucibleChoice('${scenario.id}', '${choice.id}')">
+            <span style="font-weight: 700; color: var(--accent-cyan);">${String.fromCharCode(65 + idx)}.</span>
+            <div style="flex: 1;">${choice.label}</div>
+          </button>
+        `;
+      }).join("")}
+    </div>
+
+    ${selectedChoice ? `
+      <div class="crucible-feedback-box ${selectedChoice.resultType}">
+        <div style="font-weight: 700; margin-bottom: 0.35rem; display: flex; justify-content: space-between;">
+          <span>${selectedChoice.resultType === 'pass' ? '✓ Masterful Field Diplomacy (+100 XP)' : '✕ Critical Escalation Risk'}</span>
+          <span>Score: ${selectedChoice.points} / 100</span>
+        </div>
+        <div>${selectedChoice.outcome}</div>
+      </div>
+    ` : ''}
+  `;
+}
+
+function selectCrucibleScenario(scenarioId) {
+  AppState.activeCrucibleScenario = scenarioId;
+  renderStakeholderCrucible();
+}
+window.selectCrucibleScenario = selectCrucibleScenario;
+
+function selectCrucibleChoice(scenarioId, choiceId) {
+  AppState.crucibleSelectedChoices[scenarioId] = choiceId;
+  renderStakeholderCrucible();
+  updateReadinessMetrics();
+}
+window.selectCrucibleChoice = selectCrucibleChoice;
+
+// ============================================================================
+// CROSS-INDUSTRY DEPLOYMENT & COMPLIANCE TIERS
+// ============================================================================
+function renderComplianceTiers() {
+  const container = document.getElementById("compliance-tiers-container");
+  if (!container) return;
+
+  container.innerHTML = COMPLIANCE_TIERS.map(tier => `
+    <div class="compliance-tier-card">
+      <div class="compliance-tier-header">
+        <div class="compliance-tier-title">${tier.name}</div>
+        <span class="tag-badge" style="color: ${tier.accent}; border-color: ${tier.accent}40;">${tier.badge}</span>
+      </div>
+      <ul class="compliance-constraints-list">
+        ${tier.characteristics.map(c => `
+          <li>
+            <span class="compliance-bullet">▸</span>
+            <span>${c}</span>
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `).join("");
+}
+
+// ============================================================================
+// FDE DEFINITION OF DONE (DOD) & HANDOVER CHECKLIST
+// ============================================================================
+async function initDodChecklist() {
+  try {
+    const saved = await storage.get("meta", "dod_checks");
+    if (saved && saved.checks) {
+      AppState.dodChecks = saved.checks;
+    }
+  } catch (e) {
+    // Fallback in memory
+  }
+  renderDodChecklist();
+}
+
+function renderDodChecklist() {
+  const container = document.getElementById("dod-checklist-container");
+  const counter = document.getElementById("dod-progress-counter");
+  if (!container) return;
+
+  const completedCount = Object.values(AppState.dodChecks).filter(Boolean).length;
+  if (counter) counter.innerText = `${completedCount} / ${DOD_CHECKLIST_ITEMS.length}`;
+
+  container.innerHTML = DOD_CHECKLIST_ITEMS.map(item => {
+    const isDone = !!AppState.dodChecks[item.id];
+    return `
+      <div class="dod-item ${isDone ? 'completed' : ''}" onclick="toggleDodItem('${item.id}')">
+        <div class="dod-checkbox">${isDone ? '✓' : ''}</div>
+        <div>
+          <div class="dod-title">${item.title}</div>
+          <div class="dod-desc">${item.desc}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function toggleDodItem(itemId) {
+  AppState.dodChecks[itemId] = !AppState.dodChecks[itemId];
+  renderDodChecklist();
+  updateReadinessMetrics();
+  try {
+    await storage.set("meta", { id: "dod_checks", checks: AppState.dodChecks });
+  } catch (e) {}
+}
+window.toggleDodItem = toggleDodItem;
+
+// ============================================================================
+// AUTHORITATIVE ENTERPRISE TRAINING HUB
+// ============================================================================
+function renderEnterpriseResources() {
+  const grid = document.getElementById("enterprise-resource-grid");
+  if (!grid) return;
+
+  grid.innerHTML = ENTERPRISE_RESOURCES.map(res => `
+    <div class="resource-card">
+      <div>
+        <div class="resource-provider">${res.provider}</div>
+        <div class="resource-title">${res.title}</div>
+        <div class="resource-desc">${res.desc}</div>
+      </div>
+      <div>
+        <div class="resource-curriculum-tags">
+          ${res.tags.map(t => `<span class="resource-tag font-mono">${t}</span>`).join("")}
+        </div>
+        <a href="${res.url}" target="_blank" rel="noopener noreferrer" class="resource-link-btn">
+          <span>Open Official Guide</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ============================================================================
+// FDE TAKE-HOME CHALLENGE SIMULATOR
+// ============================================================================
+function initTakehomeSimulator() {
+  const table = document.getElementById("takehome-dataset-table");
+  const editor = document.getElementById("takehome-code-editor");
+  if (!table || !editor) return;
+
+  // Render Dataset Table
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Tx ID</th>
+        <th>Account</th>
+        <th>Amount</th>
+        <th>Currency</th>
+        <th>Timestamp</th>
+        <th>Audit Flag</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${TAKEHOME_DATASET.map(r => `
+        <tr class="${r.status.startsWith('CORRUPT') ? 'corrupt-row' : ''}">
+          <td>${r.tx_id}</td>
+          <td>${r.account_id || '<span style="color:var(--accent-rose)">MISSING</span>'}</td>
+          <td>${r.amount < 0 ? `<span style="color:var(--accent-rose)">${r.amount}</span>` : r.amount}</td>
+          <td>${r.currency}</td>
+          <td>${r.timestamp}</td>
+          <td>${r.status}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+
+  if (!editor.value.trim()) {
+    editor.value = TAKEHOME_STARTER_CODE;
+  }
+}
+
+function startTakehomeTimer() {
+  if (AppState.takehomeRunning) return;
+  AppState.takehomeRunning = true;
+  AppState.takehomeTimerInterval = setInterval(() => {
+    if (AppState.takehomeTimeLeft > 0) {
+      AppState.takehomeTimeLeft--;
+      updateTakehomeTimerDisplay();
+    } else {
+      clearInterval(AppState.takehomeTimerInterval);
+      AppState.takehomeRunning = false;
+      showToast("Take-home challenge timer expired!");
+    }
+  }, 1000);
+}
+
+function pauseTakehomeTimer() {
+  AppState.takehomeRunning = false;
+  if (AppState.takehomeTimerInterval) clearInterval(AppState.takehomeTimerInterval);
+}
+
+function resetTakehomeTimer() {
+  pauseTakehomeTimer();
+  AppState.takehomeTimeLeft = 3 * 3600;
+  updateTakehomeTimerDisplay();
+}
+
+function updateTakehomeTimerDisplay() {
+  const display = document.getElementById("takehome-timer-display");
+  if (!display) return;
+  const hours = Math.floor(AppState.takehomeTimeLeft / 3600);
+  const minutes = Math.floor((AppState.takehomeTimeLeft % 3600) / 60);
+  const seconds = AppState.takehomeTimeLeft % 60;
+  display.innerText = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function evaluateTakehomeSolution() {
+  const code = document.getElementById("takehome-code-editor")?.value;
+  const output = document.getElementById("takehome-eval-output");
+  const scorePill = document.getElementById("takehome-score-pill");
+  if (!output || !code) return;
+
+  try {
+    // Instantiate function safely
+    const fn = new Function(`${code}\nreturn reconcileLedger;`)();
+    if (typeof fn !== "function") throw new Error("reconcileLedger function was not exported or defined.");
+
+    const fxRates = { EUR: 1.08, GBP: 1.28, USD: 1.0 };
+    const result = fn(JSON.parse(JSON.stringify(TAKEHOME_DATASET)), fxRates);
+
+    if (!result || !Array.isArray(result.cleanRecords) || !Array.isArray(result.deadLetterQueue)) {
+      throw new Error("Function must return { cleanRecords, deadLetterQueue, totalVolumeUsd } object.");
+    }
+
+    let score = 0;
+    const testLogs = [];
+
+    // Test 1: Deduplication
+    const txIds = result.cleanRecords.map(r => r.tx_id);
+    const hasUniqueTxs = new Set(txIds).size === txIds.length;
+    if (hasUniqueTxs && txIds.includes("TX-1001")) {
+      score += 25;
+      testLogs.push("✓ Test 1 Passed: Deduplication preserves latest unique transaction timestamps (+25)");
+    } else {
+      testLogs.push("✕ Test 1 Failed: Duplicate transactions found or incorrect timestamp kept");
+    }
+
+    // Test 2: Dead Letter Queue routing (missing account or negative amount)
+    const dlqCount = result.deadLetterQueue.length;
+    if (dlqCount >= 2) {
+      score += 25;
+      testLogs.push(`✓ Test 2 Passed: Successfully isolated ${dlqCount} corrupted records into Dead Letter Queue (+25)`);
+    } else {
+      testLogs.push("✕ Test 2 Failed: Did not properly isolate records with missing accounts or negative balances to DLQ");
+    }
+
+    // Test 3: Currency normalization
+    const currencies = result.cleanRecords.map(r => (r.currency || "").toUpperCase());
+    const validIso = currencies.every(c => ["USD", "EUR", "GBP"].includes(c));
+    if (validIso) {
+      score += 25;
+      testLogs.push("✓ Test 3 Passed: Currency strings normalized to clean uppercase ISO codes (+25)");
+    } else {
+      testLogs.push("✕ Test 3 Failed: Corrupt currency strings (e.g. 'USD$', 'usd') found in cleanRecords");
+    }
+
+    // Test 4: Volume aggregation in base USD
+    if (typeof result.totalVolumeUsd === "number" && result.totalVolumeUsd > 0) {
+      score += 25;
+      testLogs.push(`✓ Test 4 Passed: Calculated normalized volume sum ($${result.totalVolumeUsd.toFixed(2)} USD) (+25)`);
+    } else {
+      testLogs.push("✕ Test 4 Failed: totalVolumeUsd is missing or invalid number");
+    }
+
+    AppState.takehomeScore = score;
+    if (scorePill) scorePill.innerText = `Rubric: ${score} / 100`;
+
+    output.innerHTML = `
+      <div style="font-weight: 700; color: ${score === 100 ? 'var(--accent-emerald)' : 'var(--accent-amber)'}; margin-bottom: 0.5rem;">
+        ${score === 100 ? '🎉 OUTSTANDING! All enterprise test fixtures passed.' : `Evaluation Complete: Score ${score} / 100`}
+      </div>
+      ${testLogs.map(l => `<div style="margin-bottom: 0.25rem; color: ${l.startsWith('✓') ? '#6ee7b7' : '#fda4af'};">${l}</div>`).join("")}
+    `;
+
+    updateReadinessMetrics();
+  } catch (err) {
+    output.innerHTML = `<span style="color: var(--accent-rose);">Execution Error: ${err.message}</span>`;
+  }
+}
+window.startTakehomeTimer = startTakehomeTimer;
+window.pauseTakehomeTimer = pauseTakehomeTimer;
+window.resetTakehomeTimer = resetTakehomeTimer;
+window.evaluateTakehomeSolution = evaluateTakehomeSolution;
+
+// ============================================================================
+// FDE FIELD MISSIONS: END-TO-END CLIENT DEPLOYMENTS ENGINE
+// ============================================================================
+function renderFieldMissions() {
+  const selectorContainer = document.getElementById("mission-selector-tabs-container");
+  const stepperContainer = document.getElementById("mission-stepper-container");
+  const bodyContainer = document.getElementById("mission-body-content");
+  if (!selectorContainer || !stepperContainer || !bodyContainer) return;
+
+  // 1. Mission Selector Tabs
+  selectorContainer.innerHTML = FIELD_MISSIONS.map(m => `
+    <button class="mission-selector-btn ${AppState.activeMissionId === m.id ? 'active' : ''}" onclick="selectMission('${m.id}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 6 12 12 16 14"/></svg>
+      <span>${m.title}</span>
+    </button>
+  `).join("");
+
+  const mission = FIELD_MISSIONS.find(m => m.id === AppState.activeMissionId) || FIELD_MISSIONS[0];
+  const activePhase = mission.phases.find(p => p.phaseNum === AppState.missionActivePhase) || mission.phases[0];
+
+  // 2. Stepper
+  stepperContainer.innerHTML = mission.phases.map(p => {
+    const isActive = p.phaseNum === AppState.missionActivePhase;
+    const isCompleted = !!AppState.missionChoices[`${mission.id}_p${p.phaseNum}`];
+    return `
+      <div class="mission-phase-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" onclick="selectMissionPhase(${p.phaseNum})">
+        <div class="phase-step-num">Phase ${p.phaseNum} ${isCompleted ? '✓' : ''}</div>
+        <div class="phase-step-title">${p.title}</div>
+      </div>
+    `;
+  }).join("");
+
+  // 3. Phase Body
+  const choiceKey = `${mission.id}_p${activePhase.phaseNum}`;
+  const selectedChoiceId = AppState.missionChoices[choiceKey];
+  const selectedChoice = activePhase.choices.find(c => c.id === selectedChoiceId);
+
+  bodyContainer.innerHTML = `
+    <div class="mission-brief-header">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <span class="tag-badge" style="color: var(--accent-cyan)">Phase ${activePhase.phaseNum} of 4: ${activePhase.title}</span>
+          <h2 class="card-title" style="margin-top: 0.35rem;">${mission.client}</h2>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">${activePhase.subtitle}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="runMissionChaos('${mission.id}', ${activePhase.phaseNum})">
+          ⚡ Run Phase Verification Drill
+        </button>
+      </div>
+
+      <div class="mission-meta-row">
+        <span><strong>Client Problem:</strong> ${mission.problem}</span>
+      </div>
+    </div>
+
+    <!-- Phase Scenario Question -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 0.4rem;">
+        Field Decision Gate // Phase ${activePhase.phaseNum}
+      </div>
+      <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 1rem; line-height: 1.5;">
+        ${activePhase.question}
+      </p>
+
+      <div class="crucible-choices">
+        ${activePhase.choices.map((c, idx) => {
+          const isSelected = selectedChoiceId === c.id;
+          return `
+            <button class="crucible-choice-btn ${isSelected ? 'selected' : ''}" onclick="selectMissionChoice('${mission.id}', ${activePhase.phaseNum}, '${c.id}')">
+              <span style="font-weight: 700; color: var(--accent-cyan);">${String.fromCharCode(65 + idx)}.</span>
+              <div>${c.label}</div>
+            </button>
+          `;
+        }).join("")}
+      </div>
+
+      ${selectedChoice ? `
+        <div class="crucible-feedback-box ${selectedChoice.points > 50 ? 'pass' : 'fail'}" style="margin-top: 1rem;">
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">
+            ${selectedChoice.points > 50 ? '✓ Strategic Architecture Choice Verified (+100 XP)' : '✕ Sub-Optimal Architecture'}
+          </div>
+          <div>${selectedChoice.feedback}</div>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- Production Code Artifact -->
+    <div class="mission-artifact-card">
+      <div class="mission-artifact-header">
+        <span>Production Code Artifact (Click to Copy)</span>
+        <button class="btn btn-ghost btn-sm" style="font-size: 0.75rem;" onclick="copyCodeSnippet('${activePhase.phaseNum}')">Copy Artifact</button>
+      </div>
+      <pre style="background: #020617; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1rem; font-family: var(--font-mono); font-size: 0.8rem; color: #67e8f9; overflow-x: auto;"><code>${activePhase.codeSnippet}</code></pre>
+    </div>
+
+    <!-- Real-Time Terminal Execution Output -->
+    <div style="background: #020617; border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 1rem;">
+      <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; margin-bottom: 0.4rem; font-family: var(--font-mono);">
+        Live Onsite Execution Telemetry:
+      </div>
+      <pre style="font-family: var(--font-mono); font-size: 0.8rem; color: #a5f3fc; line-height: 1.5; white-space: pre-wrap;">${activePhase.terminalOutput}</pre>
+    </div>
+  `;
+}
+
+function selectMission(missionId) {
+  AppState.activeMissionId = missionId;
+  AppState.missionActivePhase = 1;
+  renderFieldMissions();
+}
+window.selectMission = selectMission;
+
+function selectMissionPhase(phaseNum) {
+  AppState.missionActivePhase = phaseNum;
+  renderFieldMissions();
+}
+window.selectMissionPhase = selectMissionPhase;
+
+function selectMissionChoice(missionId, phaseNum, choiceId) {
+  AppState.missionChoices[`${missionId}_p${phaseNum}`] = choiceId;
+  renderFieldMissions();
+  showToast(`Phase ${phaseNum} decision recorded.`);
+  updateReadinessMetrics();
+}
+window.selectMissionChoice = selectMissionChoice;
+
+function runMissionChaos(missionId, phaseNum) {
+  showToast(`Running automated chaos drill for Phase ${phaseNum}...`);
+  setTimeout(() => {
+    showToast("✓ All health probes and failover gates green. Zero packet loss verified.");
+  }, 900);
+}
+window.runMissionChaos = runMissionChaos;
+
+function copyCodeSnippet(phaseNum) {
+  const mission = FIELD_MISSIONS.find(m => m.id === AppState.activeMissionId) || FIELD_MISSIONS[0];
+  const phase = mission.phases.find(p => p.phaseNum == phaseNum);
+  if (phase && phase.codeSnippet) {
+    copyTextToClipboard(phase.codeSnippet, "Mission code artifact copied to clipboard!");
+  }
+}
+window.copyCodeSnippet = copyCodeSnippet;
+
+// ============================================================================
+// COMPANY-SPECIFIC INTERVIEW DOSSIERS & OUTREACH SCRIPTS
+// ============================================================================
+function renderCompanyDossiers() {
+  const container = document.getElementById("company-dossiers-container");
+  if (!container) return;
+
+  container.innerHTML = COMPANY_DOSSIERS.map(d => `
+    <div class="dossier-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div class="dossier-company-name">${d.company}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">${d.role}</div>
+        </div>
+        <span class="tag-badge" style="color: var(--accent-emerald); font-weight: 700;">${d.comp}</span>
+      </div>
+
+      <div style="font-size: 0.78rem; color: var(--text-subtle);">
+        <strong>Focus Sectors:</strong> ${d.sectors}
+      </div>
+
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.85rem; margin-top: 0.4rem;">
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 0.4rem;">Interview Loop Blueprint:</div>
+        <ul class="dossier-rounds-list">
+          ${d.interviewLoop.map(r => `<li><span>▸</span><span>${r}</span></li>`).join("")}
+        </ul>
+      </div>
+
+      <div style="font-size: 0.78rem; color: var(--text-muted);">
+        <strong>Tech Stack:</strong> <code class="font-mono" style="color: var(--accent-cyan);">${d.techStack}</code>
+      </div>
+
+      <div style="background: rgba(6,182,212,0.06); border-left: 3px solid var(--accent-cyan); padding: 0.65rem 0.85rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.8rem; color: #a5f3fc;">
+        <strong>FDE Insider Tip:</strong> ${d.fdeSecret}
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderOutreachScripts() {
+  const container = document.getElementById("outreach-scripts-container");
+  if (!container) return;
+
+  container.innerHTML = OUTREACH_SCRIPTS.map(s => `
+    <div class="outreach-script-card">
+      <div class="outreach-header">
+        <div>
+          <span class="tag-badge" style="color: var(--accent-indigo);">${s.target}</span>
+          <h3 class="card-title" style="margin-top: 0.3rem;">Subject: ${s.subject}</h3>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="copyOutreachScript('${s.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Script
+        </button>
+      </div>
+
+      <div class="outreach-text-box" id="script-text-${s.id}">${s.body}</div>
+    </div>
+  `).join("");
+}
+
+function copyOutreachScript(scriptId) {
+  const textEl = document.getElementById(`script-text-${scriptId}`);
+  if (!textEl) return;
+  navigator.clipboard.writeText(textEl.innerText).then(() => {
+    showToast("Outreach template copied to clipboard!");
+  }).catch(() => {
+    showToast("Copied script text.");
+  });
+}
+window.copyOutreachScript = copyOutreachScript;
+
+// ============================================================================
+// INTERACTIVE FIELD TERMINAL SIMULATOR: 12 BASTION DIAGNOSTIC DRILLS
+// ============================================================================
+function initTerminalSimulator() {
+  const input = document.getElementById("terminal-cli-input");
+  if (!input) return;
+
+  updateTerminalDrillDisplay();
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const cmd = input.value.trim();
+      if (!cmd) return;
+      handleTerminalCommand(cmd);
+      input.value = "";
+    }
+  });
+}
+
+function updateTerminalDrillDisplay() {
+  const drill = TERMINAL_DRILLS[AppState.currentTerminalDrillIndex];
+  const catLabel = document.getElementById("drill-category-label");
+  const promptText = document.getElementById("drill-prompt-text");
+  const hintText = document.getElementById("drill-hint-text");
+  const statusLabel = document.getElementById("drill-status-label");
+
+  if (catLabel) catLabel.innerText = `Drill ${AppState.currentTerminalDrillIndex + 1} of ${TERMINAL_DRILLS.length}: ${drill.category}`;
+  if (promptText) promptText.innerText = drill.prompt;
+  if (hintText) hintText.innerHTML = `Hint: <code>${drill.hint}</code>`;
+  if (statusLabel) {
+    statusLabel.innerText = "Pending Input";
+    statusLabel.style.color = "var(--accent-amber)";
+  }
+}
+
+function handleTerminalCommand(cmd) {
+  const termBody = document.getElementById("terminal-body");
+  const statusLabel = document.getElementById("drill-status-label");
+  if (!termBody) return;
+
+  // Append user command
+  const cmdRow = document.createElement("div");
+  cmdRow.className = "terminal-output-line";
+  cmdRow.innerHTML = `<span style="color:var(--accent-emerald)">analyst@bastion:~$</span> <span style="color:#fff">${escapeHtml(cmd)}</span>`;
+  termBody.appendChild(cmdRow);
+
+  const drill = TERMINAL_DRILLS[AppState.currentTerminalDrillIndex];
+
+  // Help command
+  if (cmd.toLowerCase() === "help") {
+    const out = document.createElement("div");
+    out.className = "terminal-output-line";
+    out.style.color = "var(--text-muted)";
+    out.innerText = "Available diagnostic tools: curl, openssl, nc, docker, psql, jq, df, grep, kill, chmod, netstat, sha256sum.";
+    termBody.appendChild(out);
+    termBody.scrollTop = termBody.scrollHeight;
+    return;
+  }
+
+  // Validate command
+  const isCorrect = drill.validate(cmd);
+  const out = document.createElement("div");
+  out.className = "terminal-output-line";
+
+  if (isCorrect) {
+    out.style.color = "#6ee7b7";
+    out.innerText = drill.successOutput;
+    termBody.appendChild(out);
+    if (statusLabel) {
+      statusLabel.innerText = "✓ Drill Passed";
+      statusLabel.style.color = "var(--accent-emerald)";
+    }
+    showToast(`Drill ${AppState.currentTerminalDrillIndex + 1} Passed! (+50 XP)`);
+  } else {
+    out.style.color = "#fca5a5";
+    out.innerText = `bash: command executed but did not resolve target diagnostic condition.\nExpected pattern: ${drill.hint}`;
+    termBody.appendChild(out);
+  }
+
+  termBody.scrollTop = termBody.scrollHeight;
+}
+
+function nextTerminalDrill() {
+  AppState.currentTerminalDrillIndex = (AppState.currentTerminalDrillIndex + 1) % TERMINAL_DRILLS.length;
+  updateTerminalDrillDisplay();
+  const termBody = document.getElementById("terminal-body");
+  if (termBody) {
+    const divider = document.createElement("div");
+    divider.className = "terminal-output-line";
+    divider.style.color = "var(--accent-cyan)";
+    divider.innerText = `\n--- Advanced to Drill ${AppState.currentTerminalDrillIndex + 1}: ${TERMINAL_DRILLS[AppState.currentTerminalDrillIndex].category} ---`;
+    termBody.appendChild(divider);
+    termBody.scrollTop = termBody.scrollHeight;
+  }
+}
+window.nextTerminalDrill = nextTerminalDrill;
+
+function resetTerminal() {
+  const termBody = document.getElementById("terminal-body");
+  if (termBody) {
+    termBody.innerHTML = `
+      <div class="terminal-output-line" style="color: var(--text-subtle);">[Terminal Cleared. Offline Enclave Session Active]</div>
+    `;
+  }
+}
+window.resetTerminal = resetTerminal;
+
+// ============================================================================
+// EXPORTABLE FDE FIELD GUIDE GENERATOR (MARKDOWN & PRINT)
+// ============================================================================
+function exportFieldGuide() {
+  let md = `# Forward Deployed Engineering (FDE) Field Deployment Guide\n\n`;
+  md += `Generated: ${new Date().toUTCString()}\n`;
+  md += `Platform: FDE Mastery Academy (100% Offline Progressive Web App)\n\n`;
+  md += `---\n\n`;
+
+  md += `## 1. FDE Core Definition of Done (DoD)\n\n`;
+  DOD_CHECKLIST_ITEMS.forEach((item, idx) => {
+    const isDone = AppState.dodChecks[item.id] ? "[X]" : "[ ]";
+    md += `${idx + 1}. ${isDone} **${item.title}**: ${item.desc}\n`;
+  });
+  md += `\n---\n\n`;
+
+  md += `## 2. Cross-Industry Deployment & Air-Gap Compliance Tiers\n\n`;
+  COMPLIANCE_TIERS.forEach(tier => {
+    md += `### ${tier.name} (${tier.badge})\n`;
+    tier.characteristics.forEach(c => md += `- ${c}\n`);
+    md += `\n`;
+  });
+  md += `---\n\n`;
+
+  md += `## 3. High-Yield Production Code Snippets\n\n`;
+  AppState.snippets.forEach(s => {
+    md += `### ${s.title} (${s.lang})\n`;
+    md += `\`\`\`${s.lang}\n${s.code}\n\`\`\`\n\n`;
+  });
+  md += `---\n\n`;
+
+  md += `## 4. Field Notes & Triage Runbooks\n\n`;
+  AppState.notes.forEach(n => {
+    md += `### ${n.title} [${n.category}]\n`;
+    md += `${n.content}\n\n`;
+  });
+
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `FDE_Field_Deployment_Guide_${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("FDE Field Guide exported as Markdown.");
+}
+window.exportFieldGuide = exportFieldGuide;
+
 
 // ============================================================================
 // 7. SECTION 1: LEARNING FDE SKILLS
@@ -3032,6 +5208,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // iOS Guide Modal
   document.getElementById("close-ios-guide-btn")?.addEventListener("click", () => closeModal("ios-guide-modal"));
+
+  // Take-Home Challenge Simulator
+  document.getElementById("takehome-start-btn")?.addEventListener("click", startTakehomeTimer);
+  document.getElementById("takehome-pause-btn")?.addEventListener("click", pauseTakehomeTimer);
+  document.getElementById("takehome-reset-btn")?.addEventListener("click", resetTakehomeTimer);
+  document.getElementById("run-takehome-eval-btn")?.addEventListener("click", evaluateTakehomeSolution);
+
+  // Field Terminal Simulator
+  document.getElementById("reset-terminal-btn")?.addEventListener("click", resetTerminal);
+  document.getElementById("next-terminal-drill-btn")?.addEventListener("click", nextTerminalDrill);
+
+  // Field Guide Export
+  document.getElementById("export-field-guide-btn")?.addEventListener("click", exportFieldGuide);
 
   // Global Keyboard Shortcuts (1-5 for 5 tabs)
   window.addEventListener("keydown", (e) => {

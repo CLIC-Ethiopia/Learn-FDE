@@ -27,7 +27,7 @@
       if ('caches' in window) {
         caches.keys().then((keys) => {
           keys.forEach((key) => {
-            if (key !== 'fde-mastery-v2') {
+            if (key !== 'fde-mastery-v3') {
               console.log('[App] Clearing legacy cache:', key);
               caches.delete(key);
             }
@@ -37,7 +37,7 @@
     </script>
 
     <!-- Application Stylesheet -->
-    <link rel="stylesheet" href="/main.css?v=2" />
+    <link rel="stylesheet" href="/main.css?v=3" />
   </head>
   <body>
     <!-- Offline Alert Banner (shown when browser is disconnected) -->
@@ -60,7 +60,6 @@
             <div>
               <div class="brand-title">
                 <span>FDE</span><span style="color: var(--accent-cyan)">.Mastery</span>
-                <span class="brand-badge">Air-Gap Ready</span>
               </div>
             </div>
           </div>
@@ -110,11 +109,6 @@
               <span>Install App</span>
             </button>
 
-            <!-- Offline / Online Connection Pill -->
-            <div id="connection-pill" class="status-pill" title="Network status">
-              <span class="status-beacon"></span>
-              <span id="connection-text">Online</span>
-            </div>
           </div>
         </div>
       </header>
@@ -239,6 +233,75 @@
               </div>
             </div>
           </div>
+
+          <!-- Row 4: Stakeholder Crucible & De-escalation Simulator (Col 12) -->
+          <div class="bento-grid" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="bento-col-12">
+              <div class="bento-card bento-card-highlight">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-rose); border-color: rgba(244,63,94,0.3)">High-Stakes Politics</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">Client Stakeholder Crucible & De-escalation Simulator</h2>
+                    <div class="card-subtitle">Navigate hostile DBAs, CISO air-gap ambushes, and executive scope-creep under real contract deadlines.</div>
+                  </div>
+                  <span class="tag-badge" style="color: var(--accent-amber)">Field Diplomacy</span>
+                </div>
+
+                <div class="crucible-container" style="margin-top: 1.25rem;">
+                  <!-- Scenario Switcher Tabs -->
+                  <div class="crucible-tabs" id="crucible-tabs-container">
+                    <!-- Populated dynamically by app.js -->
+                  </div>
+
+                  <!-- Active Scenario Card -->
+                  <div class="crucible-card" id="crucible-scenario-card">
+                    <!-- Populated dynamically by app.js -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 5: Cross-Industry Deployment & Air-Gap Compliance Matrix (Col 12) -->
+          <div class="bento-grid" style="margin-bottom: 1.5rem;">
+            <div class="bento-col-12">
+              <div class="bento-card">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-cyan)">Infrastructure Topology</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">Cross-Industry Deployment & Air-Gap Compliance Tiers</h2>
+                    <div class="card-subtitle">Every sector enforces distinct infrastructure boundaries. Contrast Defense, FinTech, Healthcare, and Industrial IoT.</div>
+                  </div>
+                </div>
+
+                <div class="compliance-tier-grid" id="compliance-tiers-container">
+                  <!-- Populated dynamically by app.js -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 6: FDE Definition of Done (DoD) & Client Handover Playbook (Col 12) -->
+          <div class="bento-grid">
+            <div class="bento-col-12">
+              <div class="bento-card bento-card-highlight">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-emerald)">Production Handover</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">FDE Definition of Done (DoD) & Offboarding Playbook</h2>
+                    <div class="card-subtitle">A deployment isn't done when your laptop works; it's done when client engineers can run and recover it without paging you.</div>
+                  </div>
+                  <div style="font-size: 0.85rem; color: var(--accent-emerald); font-weight: 700;">
+                    Progress: <span id="dod-progress-counter">0 / 6</span> Complete
+                  </div>
+                </div>
+
+                <div class="dod-checklist-grid" id="dod-checklist-container">
+                  <!-- Populated dynamically by app.js -->
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- ====================================================================
@@ -266,6 +329,26 @@
           <div class="bento-grid" id="modules-bento-grid">
             <!-- Populated dynamically by app.js -->
           </div>
+
+          <!-- Bento Grid: Authoritative Enterprise Training Hub (External Resources) -->
+          <div class="bento-grid" style="margin-top: 2rem;">
+            <div class="bento-col-12">
+              <div class="bento-card bento-card-highlight">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-indigo)">Official Technical Curricula</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">Authoritative Enterprise Training Hub</h2>
+                    <div class="card-subtitle">Direct, free training documentation and whitepapers from primary cloud platforms, AI labs, and deployment giants.</div>
+                  </div>
+                  <span class="tag-badge" style="color: var(--accent-cyan)">Production Field Guides</span>
+                </div>
+
+                <div class="resource-hub-grid" id="enterprise-resource-grid">
+                  <!-- Populated dynamically by app.js -->
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- ====================================================================
@@ -286,6 +369,8 @@
             <button class="subnav-tab" data-interview-tool="puzzles">2. Interactive Logic Puzzles</button>
             <button class="subnav-tool subnav-tab" data-interview-tool="coding">3. Algorithmic Coding Challenges</button>
             <button class="subnav-tab" data-interview-tool="scenarios">4. Systems Architecture Scenarios</button>
+            <button class="subnav-tab" data-interview-tool="takehome">5. Take-Home Simulator</button>
+            <button class="subnav-tab" data-interview-tool="missions">6. Field Missions (End-to-End)</button>
           </div>
 
           <!-- Tool 2A: 3D Flashcard Engine -->
@@ -517,6 +602,104 @@
               </div>
             </div>
           </div>
+
+          <!-- Tool 2E: FDE Take-Home Challenge Simulator -->
+          <div id="tool-takehome" class="interview-tool-view" style="display: none;">
+            <div class="takehome-container">
+              <div class="takehome-timer-bar">
+                <div>
+                  <span class="tag-badge" style="color: var(--accent-amber)">Timed Enterprise Challenge</span>
+                  <div style="font-weight: 700; color: #fff; margin-top: 0.2rem;">Core Banking Dirty Data Reconciliation & Webhook Pipeline</div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted)">Standard 3-hour enterprise take-home challenge used by top FDE employers.</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.75rem; color: var(--text-subtle); text-transform: uppercase;">Time Remaining</div>
+                  <div class="takehome-time-val" id="takehome-timer-display">03:00:00</div>
+                  <div style="display: flex; gap: 0.35rem; margin-top: 0.35rem;">
+                    <button id="takehome-start-btn" class="btn btn-primary btn-sm" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Start</button>
+                    <button id="takehome-pause-btn" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Pause</button>
+                    <button id="takehome-reset-btn" class="btn btn-ghost btn-sm" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Reset</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Challenge Bento Split -->
+              <div class="bento-grid">
+                <!-- Left: Brief & Corrupted Dataset Preview (Col 6) -->
+                <div class="bento-col-6">
+                  <div class="bento-card bento-card-highlight">
+                    <div class="card-title">Problem Statement & Dirty Data Feed</div>
+                    <div class="card-subtitle">Customer core banking exports have schema drift, missing currency ISOs, and duplicated transaction UUIDs.</div>
+
+                    <div style="margin-top: 1rem; font-size: 0.85rem; line-height: 1.5; color: var(--text-main);">
+                      <p><strong>Your Task:</strong> Author an idempotent reconciler function <code>reconcileLedger(records, fxRates)</code> that:</p>
+                      <ul style="padding-left: 1.25rem; margin-top: 0.4rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.3rem;">
+                        <li>Deduplicates rows by <code>tx_id</code> (keep the latest timestamp).</li>
+                        <li>Normalizes corrupt currencies (e.g., <code>"USD$"</code> or <code>"usd"</code> -> <code>"USD"</code>).</li>
+                        <li>Converts all amounts to base USD using <code>fxRates</code> table.</li>
+                        <li>Routes corrupted records with negative amounts or missing accounts to a DLQ array.</li>
+                      </ul>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                      <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 0.3rem;">
+                        Live Corrupted Sample Dataset (Inspect Below):
+                      </div>
+                      <div style="max-height: 220px; overflow-y: auto; background: #020617; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.5rem;">
+                        <table class="dataset-preview-table" id="takehome-dataset-table">
+                          <!-- Populated dynamically -->
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Interactive Sandbox & Rubric Grader (Col 6) -->
+                <div class="bento-col-6">
+                  <div class="bento-card">
+                    <div class="card-header-flex">
+                      <div>
+                        <div class="card-title">Solution Workbench</div>
+                        <div class="card-subtitle">Test your solution against the automated grading suite</div>
+                      </div>
+                      <button id="run-takehome-eval-btn" class="btn btn-emerald btn-sm">Evaluate Solution</button>
+                    </div>
+
+                    <div class="code-editor-container" style="margin-top: 0.75rem;">
+                      <div class="code-editor-header">
+                        <span>JavaScript ES6 Reconciler</span>
+                        <span id="takehome-score-pill" style="font-weight: 700; color: var(--accent-cyan)">Rubric: 0 / 100</span>
+                      </div>
+                      <textarea id="takehome-code-editor" class="code-textarea" style="min-height: 220px;" spellcheck="false"></textarea>
+                      <div class="test-output-console" id="takehome-eval-output">
+                        Click "Evaluate Solution" to grade against 5 automated enterprise edge cases...
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 2F: FDE Field Missions Engine: End-to-End Client Deployments -->
+          <div id="tool-missions" class="interview-tool-view" style="display: none;">
+            <div class="mission-container">
+              <!-- Mission Selector Tabs -->
+              <div class="mission-selector-tabs" id="mission-selector-tabs-container">
+                <!-- Populated dynamically by app.js -->
+              </div>
+
+              <!-- Phase Stepper -->
+              <div class="mission-stepper" id="mission-stepper-container">
+                <!-- Populated dynamically by app.js -->
+              </div>
+
+              <!-- Active Phase Body & Workspace -->
+              <div class="mission-body-card" id="mission-body-content">
+                <!-- Populated dynamically by app.js -->
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- ====================================================================
@@ -536,6 +719,8 @@
             <button class="subnav-tab active" data-job-view="kanban">1. Application Pipeline Kanban</button>
             <button class="subnav-tab" data-job-view="portfolio">2. Open-Source Portfolio Tracker</button>
             <button class="subnav-tab" data-job-view="resume">3. Resume Optimization & Action Verbs</button>
+            <button class="subnav-tab" data-job-view="dossiers">4. Company-Specific Dossiers</button>
+            <button class="subnav-tab" data-job-view="outreach">5. Executive Outreach Scripts</button>
           </div>
 
           <!-- View 3A: Kanban Board -->
@@ -593,6 +778,20 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- View 3D: Company Dossiers -->
+          <div id="job-view-dossiers" class="job-subview" style="display: none;">
+            <div class="dossier-grid" id="company-dossiers-container">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- View 3E: Executive Outreach Scripts -->
+          <div id="job-view-outreach" class="job-subview" style="display: none;">
+            <div id="outreach-scripts-container">
+              <!-- Populated dynamically by app.js -->
             </div>
           </div>
         </section>
@@ -749,6 +948,79 @@
 
                 <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; max-height: 480px; overflow-y: auto;" id="snippets-container">
                   <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Interactive Field Terminal Simulator & Diagnostic Drills -->
+          <div class="bento-grid" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="bento-col-12">
+              <div class="bento-card bento-card-highlight">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-emerald)">Hands-On Bastion Drills</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">Interactive Field Terminal & Diagnostic Sandbox</h2>
+                    <div class="card-subtitle">Execute real shell commands against simulated Linux, Docker, PostgreSQL, and network proxies in an air-gapped terminal.</div>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button id="reset-terminal-btn" class="btn btn-secondary btn-sm">Clear Terminal</button>
+                    <button id="next-terminal-drill-btn" class="btn btn-primary btn-sm">Next Drill</button>
+                  </div>
+                </div>
+
+                <!-- Drill Prompt Bar -->
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-top: 1rem;">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--text-subtle); margin-bottom: 0.3rem;">
+                    <span id="drill-category-label">Drill 1 of 12: Network Diagnostics</span>
+                    <span id="drill-status-label" style="color: var(--accent-amber)">Pending Input</span>
+                  </div>
+                  <div id="drill-prompt-text" style="font-size: 0.9rem; color: #fff; font-weight: 600;">
+                    Check if port 5432 on internal host 10.200.4.12 is listening and accessible using nc (netcat) with a 2-second timeout.
+                  </div>
+                  <div id="drill-hint-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem;">
+                    Hint: Try <code>nc -zv -w 2 10.200.4.12 5432</code>
+                  </div>
+                </div>
+
+                <!-- Interactive Terminal Window -->
+                <div class="terminal-window">
+                  <div class="terminal-titlebar">
+                    <div class="terminal-controls">
+                      <div class="terminal-dot dot-red"></div>
+                      <div class="terminal-dot dot-yellow"></div>
+                      <div class="terminal-dot dot-green"></div>
+                    </div>
+                    <span>fde-airgap-jumpbox: ~/diagnostics</span>
+                    <span>bash 5.2</span>
+                  </div>
+                  <div class="terminal-body" id="terminal-body">
+                    <div class="terminal-output-line" style="color: var(--text-subtle);">[FDE Bastion Jumpbox Initialized. Offline Enclave v2.4]</div>
+                    <div class="terminal-output-line" style="color: var(--text-subtle);">Type the required shell command and press [Enter]. Try typing 'help' for available commands.</div>
+                  </div>
+                  <div class="terminal-input-row">
+                    <span class="terminal-prompt-label">analyst@bastion:~$</span>
+                    <input type="text" id="terminal-cli-input" class="terminal-input" placeholder="Type shell command..." autocomplete="off" spellcheck="false" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 4: One-Click Exportable FDE Field Guide & Cheat-Sheet Generator -->
+          <div class="bento-grid">
+            <div class="bento-col-12">
+              <div class="bento-card">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="tag-badge" style="color: var(--accent-cyan)">Offline Export</span>
+                    <h2 class="card-title" style="margin-top: 0.35rem;">Exportable FDE Field Guide & Cheat-Sheet Engine</h2>
+                    <div class="card-subtitle">Generate a pristine Markdown or printable field booklet containing your notes, code snippets, mission architectures, and key formulas.</div>
+                  </div>
+                  <button id="export-field-guide-btn" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Field Guide (Markdown)
+                  </button>
                 </div>
               </div>
             </div>
@@ -990,6 +1262,6 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Main Application Script (ES Module) -->
-    <script type="module" src="/app.js?v=2"></script>
+    <script type="module" src="/app.js?v=3"></script>
   </body>
 </html>
