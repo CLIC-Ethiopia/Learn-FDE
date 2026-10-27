@@ -1,120 +1,117 @@
-# FDE Careers & Overview - Implementation Plan
+# Implementation Plan: AI-Powered FDE Resume & 5–8 Page Portfolio Generator
 
-Introduce a comprehensive, interactive first tab titled **FDE Careers & Overview** that immerses users in the reality, responsibilities, career trajectory, and day-to-day life of Forward Deployed Engineers (FDEs). Remove numeric prefixes from all navigation tabs to achieve a clean, professional aesthetic while preserving keyboard shortcuts.
+## Overview
+Add an AI-powered document intelligence engine to the **Job Hunting** tab (under **"Resume Optimization & Action Verbs"**). Candidates can upload an existing CV or resume in **PDF** or **DOCX** format, select their target FDE specialization (**Enterprise AI & Data Platforms**, **Defense & Air-Gapped Systems**, or **Generalist FDE**), and generate two production-grade, publication-ready documents:
+1. **Targeted FDE Resume (2–3 Pages)**: Quantified impact bullets, client-facing enterprise system architecture keywords, security postures, and metric-driven achievements.
+2. **Deep-Dive FDE Technical Portfolio (5–8 Pages)**: Multi-page engineering dossier featuring 4 in-depth STAR system architecture case studies, data pipelines, trade-off analyses, air-gap security constraints, and client deployment metrics.
 
----
-
-## User Review & Critical Decisions
-
-> [!IMPORTANT]
-> The following user preferences were confirmed during Phase 1:
-> - **Tab Title**: **FDE Careers & Overview** placed as the first primary tab in the platform navigation.
-> - **Tab Numbering**: Strip numeric prefixes (`1.`, `2.`, etc.) from all tab labels for a clean, human-readable editorial navigation bar.
-> - **Interactive Capabilities**: All 4 requested exploration tools will be fully implemented:
->   1. *Interactive Day-in-the-Life hourly simulator* (dynamic timeline scrubbing through a real enterprise deployment day).
->   2. *FDE Career Archetype diagnostic quiz* (calculates builder vs. diplomat balance and recommends specific company tracks like Palantir, Scale AI, or OpenAI).
->   3. *Role Comparison Matrix* (interactive comparative breakdown across FDE, traditional SWE, Solutions Architect, and TAM).
->   4. *Career Progression & Compensation Explorer* (interactive level explorer from Associate FDE to Principal/Director with realistic compensation bands, responsibilities, and promotion rubrics).
+Both documents include interactive multi-page preview tabs, styled print-to-PDF layout (with clean CSS page breaks and typography), and instant Markdown `.md` export.
 
 ---
 
-## 1. Overview & Core Concept
-
-- **What It Does**: Serves as the authoritative, immersive orientation guide to Forward Deployed Engineering. It answers: *What does an FDE actually do?*, *How is it different from a SWE or Solutions Architect?*, *What does an average day on-site look like?*, *What are the career levels and earning potential?*, and *Which type of FDE archetype are you?*.
-- **Target Audience**: Software engineers, systems architects, and technical professionals looking to transition into high-impact, client-facing AI/enterprise deployment roles at top tech companies.
-- **Key Value**: Bridges the conceptual gap before users dive into deep technical modules or interview prep, providing real-world clarity on role expectations, travel realities, field diplomacy, and compensation trajectory.
+## User-Confirmed Requirements
+- **Export Formats**: Interactive styled print-to-PDF view and clean Markdown (`.md`) download.
+- **Target Specializations**: Selectable archetype toggle before generation:
+  - *Enterprise AI & Data Platforms* (LLM pipelines, RAG, Databricks/Snowflake, vector search, SOC2/HIPAA)
+  - *Defense & Air-Gapped Systems* (Zero-trust, SCIF deployments, ruggedized edge, mTLS, zero external egress)
+  - *Generalist FDE* (Full-stack distributed systems, customer engineering, forward-deployed rapid prototyping)
+- **Portfolio Architecture**: Rigorous STAR (Situation, Task, Action, Result) architecture case studies with tech stacks, sequence/data flows, operational friction points, and measurable business/technical outcomes.
 
 ---
 
-## 2. User Experience & Visual Design
+## Proposed Changes
 
-### Visual Layout & Bento Grid Architecture
+### 1. Backend Service (`server.ts`)
+- **New Dependency**: Add `mammoth` (or lightweight `.docx` XML extractor) to parse Word documents into structured text.
+- **Gemini API Integration**:
+  - Use `@google/genai` with `gemini-2.5-flash` model.
+  - Native multimodal PDF support: Pass PDF base64 directly as inline part (`application/pdf`) to Gemini without lossy local extraction.
+  - DOCX support: Extract raw text via `mammoth` and pass to Gemini.
+- **Endpoint `POST /api/resume/analyze-generate`**:
+  - Accepts `{ fileBase64, fileName, fileType, archetype, targetRoleLevel }`.
+  - Orchestrates dual-prompt generation:
+    - **Prompt A (Resume Generation)**: Re-engineers the candidate's history into a 2–3 page senior FDE resume using Vanguard action verbs, high-density impact metrics, and client deployment highlights.
+    - **Prompt B (Portfolio Dossier Generation)**: Synthesizes a comprehensive 5–8 page technical engineering dossier with 4 multi-page STAR case studies (System Architecture, Failure Modes & Edge Cases, Client Stakeholder Management, Production Verification).
+  - Includes robust offline fallback synthesizer in case external API limits or sandbox connectivity thresholds are hit, guaranteeing smooth user evaluation.
 
-The section opens with an editorial hero banner explaining the unique hybrid DNA of FDEs (50% Distributed Systems / AI Engineer + 50% Enterprise Field Diplomat), followed by 4 dedicated interactive bento sections:
+### 2. Frontend User Interface (`public/index.html` & `public/app.js`)
+- **Location**: In the Job Hunting tab (`#sec-jobhunt`), inside the Sub-tab 1 ("Resume & Action Verbs") section (`#job-subtab-resume`).
+- **New Interactive Module: "AI Resume & Portfolio Transformer"**:
+  - **Dropzone & Upload Area**: Drag-and-drop or file picker for `.pdf` and `.docx` files (up to 15MB) with client-side validation and file preview chip.
+  - **Archetype Selector**:
+    - `Enterprise AI & Data Platforms`
+    - `Defense & Air-Gapped Systems`
+    - `Generalist FDE`
+  - **Generation Control**: "Analyze & Generate FDE Dossier" button with interactive progress state (Scanning CV $\rightarrow$ Extracting Architecture Archetypes $\rightarrow$ Synthesizing 2-3 Page Resume $\rightarrow$ Architecting 5-8 Page Technical Portfolio).
+- **Dual-Document Viewer & Action Bar**:
+  - Tabbed preview: **[📄 FDE Resume (2-3 Pages)]** and **[📑 Technical Portfolio (5-8 Pages)]**.
+  - **Document 1 (Resume)**: Interactive preview formatted in pages, with section breakdown (Executive Summary, Technical Arsenal, Client Engagements, Systems Deployed, Certifications).
+  - **Document 2 (Portfolio)**: Multi-page navigation (Executive Overview, Flagship Case Study 1, Flagship Case Study 2, Air-Gap & Security Posture, Data & Distributed Systems Architecture, Production Hardening & Results).
+  - **Actions**:
+    - 📥 **Export Markdown (.md)**: Downloads individual or bundled markdown files.
+    - 🖨️ **Print / Save to PDF**: Triggers window print preview with tailored `@media print` styling, headers, and automatic page breaks (`break-inside: avoid; page-break-after: always`).
+    - 📋 **Copy to Clipboard**: One-click raw markdown copy.
+
+### 3. Styling & Print Optimization (`public/main.css`)
+- Clean document viewer card designs matching Vanguard terminal/slate aesthetic.
+- Dedicated `@media print` rules:
+  - Hides navigation bars, buttons, and tab controls during printing.
+  - Applies clean, high-contrast serif/sans typography suitable for recruiter review and executive portfolios.
+  - Standard A4 / US Letter page boundary emulation with page break markers.
+
+---
+
+## Architecture & Data Flow
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Hero & Role Definition                          │
-│     "The Bridge Between Frontier Code & Messy Enterprise Reality"      │
-└────────────────────────────────────────────────────────────────────────┘
-┌───────────────────────────────────┬────────────────────────────────────┐
-│   Day-in-the-Life Simulator       │     Career Archetype Quiz          │
-│   • Hourly interactive scrubber   │     • 4-question diagnostic        │
-│   • 08:30 Bastion VPN login       │     • Builder vs. Diplomat score   │
-│   • 11:30 Client CIO Demo         │     • Personalized track matching  │
-│   • 14:00 Air-gap container debug │                                    │
-│   • 16:30 Legacy DB hotfix        │                                    │
-├───────────────────────────────────┴────────────────────────────────────┤
-│                    Interactive Role Comparison Matrix                  │
-│   Filterable criteria: Code ownership, Client contact, Travel %, etc. │
-│   FDE  vs.  Software Engineer  vs.  Solutions Architect  vs.  TAM      │
-├────────────────────────────────────────────────────────────────────────┤
-│           Career Progression Ladder & Compensation Explorer            │
-│   • L3/L4 Associate FDE ($160k-$210k)  ➔  L5 Senior FDE ($220k-$320k)  │
-│   • L6 Staff FDE ($320k-$480k)        ➔  L7+ Principal / Director      │
-│   • Key competencies & field battle-scars required at each tier        │
-└────────────────────────────────────────────────────────────────────────┘
+[User Browser]
+      │
+      ├─ Uploads CV (.pdf / .docx) + Selects Archetype (e.g. Enterprise AI)
+      │
+      ▼
+[Frontend app.js]
+      │ Base64 encodes file
+      ▼
+[POST /api/resume/analyze-generate] (Express server.ts)
+      │
+      ├─ If PDF: prepares inlineData part (mimeType: application/pdf)
+      ├─ If DOCX: extracts text via mammoth/xml buffer
+      │
+      ▼
+[@google/genai: gemini-2.5-flash]
+      │
+      ├─ Execution 1: Generates 2-3 Page FDE Resume
+      ├─ Execution 2: Generates 5-8 Page STAR Technical Portfolio
+      │
+      ▼
+[Express Server Response]
+      │ Returns { resumeMarkdown, portfolioMarkdown, analysisMetrics }
+      ▼
+[Frontend Dual-Document Viewer]
+      │ Renders interactive paginated views
+      ├─ "Print / Save PDF" (Optimized print stylesheet)
+      └─ "Download Markdown" (.md files)
 ```
-
-### Aesthetic & Design Constitution Details
-- **Clean Unboxed Navigation Tabs**: Navigation tabs will read `Careers & Overview`, `Learning Skills`, `Interview Prep`, `Job Hunting`, and `Accelerator`. Numbers are cleanly removed.
-- **Palette**: Deep slate/obsidian canvas (`#080b11`), structural borders (`var(--border-subtle)`), accent cyan (`#06b6d4`), and electric indigo (`#6366f1`).
-- **Interactive States**:
-  - The *Day-in-the-Life* timeline allows clicking time slots (Morning, Midday, Afternoon, Evening) with immediate visual feedback, task context, and a "Field Reality Check" pro-tip.
-  - The *Archetype Quiz* updates a visual radar/balance bar in real-time between "Systems Hacker", "Client Diplomat", "Product Pioneer", and "Field Operator".
-  - The *Role Comparison Matrix* lets users highlight specific dimensions (e.g. "Code Ownership", "Ambiguity Tolerance", "Onsite Travel") to contrast FDE with traditional roles.
-  - The *Career Ladder* features interactive level selector tabs that update responsibilities, equity structures, and real-world hiring company examples.
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
+## Verification Plan
 
-- **Decision 1: Tab Navigation Clean-up**:
-  - *Chosen Approach*: Remove numeric prefixes (`1.`, `2.`, etc.) from all tab text labels while retaining keyboard shortcuts (keys `1` to `5`) for effortless navigation.
-  - *Why*: Adheres to the frontend design constitution prohibiting mechanical prefixes on user-facing nav items while maintaining accessibility and speed.
-- **Decision 2: Local Persistence of Quiz & Level Selections**:
-  - *Chosen Approach*: Save the user's completed Archetype Quiz results to IndexedDB (`meta` store) so their archetype profile persists offline and integrates into their Accelerator dashboard.
-  - *Why*: Ensures continuity and personalizes the learning experience without requiring any cloud server.
+### Automated Build & Static Checks
+1. Dependency installation: Install `mammoth` (or equivalent parser) and verify `package.json`.
+2. Applet Compilation: Run `compile_applet` to ensure `server.ts` and frontend code build with zero TypeScript or bundling errors.
+3. Lint Verification: Run `lint_applet` to confirm strict type safety.
 
----
-
-## 4. Technical Architecture & Implementation Steps
-
-```
- index.html
-   ├── <nav class="nav-tabs"> (5 unnumbered tabs)
-   ├── <section id="section-overview"> (New primary view)
-   │     ├── Day-in-the-Life Timeline Widget
-   │     ├── FDE Archetype Diagnostic Widget
-   │     ├── Role Comparison Matrix
-   │     └── Career Progression & Salary Explorer
-   └── Existing sections (Skills, Interviews, Job Hunting, Accelerator)
-
- main.css
-   ├── Timeline scrubber & step node styles
-   ├── Archetype balance visual bar
-   ├── Responsive comparison table styles
-   └── Career ladder tier selector styles
-
- app.js
-   ├── AppState.activeSection = "overview" (default initial tab)
-   ├── renderOverviewSection() & interactive event handlers
-   ├── renderDayInLife(timeSlotId)
-   ├── handleArchetypeAnswer(questionIdx, optionIdx)
-   ├── highlightRoleComparison(criteriaId)
-   └── selectCareerLevel(levelId)
-```
-
-### Planned File Edits
-1. `index.html`:
-   - Add new `<button class="nav-tab-btn active" data-tab="overview">` as the first tab; update remaining 4 tabs to remove numeric prefixes.
-   - Insert `<section id="section-overview" class="view-section active">` containing semantic markup for the hero, day-in-the-life simulator, archetype quiz, role comparison, and career ladder.
-   - Adjust default visibility of other sections (`display: none` initially).
-2. `main.css`:
-   - Add CSS rules for timeline step indicators, quiz question option cards, comparison matrix hover highlights, and career level badge pills.
-3. `app.js`:
-   - Add `overview` data objects (hourly timeline slots, archetype questions & result logic, comparative role dimensions, career ladder levels).
-   - Wire event listeners for timeline clicks, quiz options, role filters, and keyboard shortcut `1` for Overview through `5` for Accelerator.
-   - Persist quiz results to IndexedDB.
-4. Compilation & Verification:
-   - Run `compile_applet` and `lint_applet` to confirm zero build regressions.
+### Manual End-to-End Scenarios
+1. **File Upload Testing**:
+   - Upload sample PDF resume $\rightarrow$ Verify file badge, name, and size appear.
+   - Upload sample DOCX resume $\rightarrow$ Verify successful parser extraction.
+2. **Archetype Customization**:
+   - Select "Defense & Air-Gapped Systems" $\rightarrow$ Verify generated CV heavily reflects zero-trust, SCIF, offline container registries, and mTLS.
+   - Select "Enterprise AI & Data Platforms" $\rightarrow$ Verify generated CV and portfolio emphasize RAG, vector stores, distributed ETL, and LLM evaluation.
+3. **Document Quality & Length Verification**:
+   - Inspect Document 1: Confirm 2–3 page structured FDE resume layout.
+   - Inspect Document 2: Confirm 5–8 page deep-dive portfolio with 4 STAR architecture case studies.
+4. **Export Operations**:
+   - Click "Export Markdown (.md)" $\rightarrow$ Verify `.md` file download.
+   - Click "Print / Save to PDF" $\rightarrow$ Verify clean print preview without UI chrome and with proper page breaks.

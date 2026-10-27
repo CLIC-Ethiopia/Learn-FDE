@@ -5222,6 +5222,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Field Guide Export
   document.getElementById("export-field-guide-btn")?.addEventListener("click", exportFieldGuide);
 
+  // Initialize AI Resume & Technical Portfolio Generator
+  initAiResumeGenerator();
+
+
   // Global Keyboard Shortcuts (1-5 for 5 tabs)
   window.addEventListener("keydown", (e) => {
     // Escape closes modals
@@ -5249,3 +5253,806 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// ============================================================================
+// AI FORWARD DEPLOYED RESUME & PORTFOLIO GENERATOR
+// ============================================================================
+
+const AiResumeState = {
+  fileBase64: null,
+  fileName: null,
+  fileType: null,
+  sampleText: null,
+  archetype: 'enterprise_ai',
+  targetRoleLevel: 'Staff Forward Deployed Engineer',
+  activeDocView: 'resume', // 'resume' | 'portfolio' | 'coverletter' | 'analysis'
+  docEditMode: false,
+  whitePrintTheme: false,
+  generatedResult: null,
+  coverLetterResult: null,
+  editedResumeMarkdown: null,
+  editedPortfolioMarkdown: null,
+  editedCoverLetterMarkdown: null
+};
+
+// Built-in Enterprise Sample Candidate profile
+const SAMPLE_ENTERPRISE_CV_TEXT = `
+ALEX MORGAN
+Staff Forward Deployed Systems & AI Engineer
+Email: alex.morgan.fde@enterprise-domain.io | Location: San Francisco, CA (100% Client Travel Ready) | Phone: +1 (415) 890-4412
+GitHub: github.com/alexmorgan-fde | LinkedIn: linkedin.com/in/alexmorgan-fde | Portfolio: portfolio.alexmorgan.fde
+Security Status: Top Secret / SCI Cleared (Current Active) | Enterprise SOC2 Lead Implementer
+
+PROFESSIONAL EXPERIENCE:
+Staff Forward Deployed Engineer | Palantir & Vantage Systems (2022 - Present)
+- Embedded directly within customer enterprise architecture teams across financial and defense clients.
+- Led the deployment of high-throughput ingestion pipelines replacing legacy mainframes with Go microservices.
+- Slashed nightly trade reconciliation latency from 7.5 hours to 18 minutes by designing memory-mapped ring buffers.
+- Navigated complex customer InfoSec audits to establish an air-gapped, zero-egress container platform on-premise.
+- Partnered with C-suite stakeholders to demonstrate mission readiness, accelerating a $14M contract expansion.
+
+Senior Distributed Systems Engineer | Databricks / Scale AI (2020 - 2022)
+- Built automated data normalization pipelines processing 40M+ messy records daily with automated PII masking.
+- Implemented circuit breakers, token bucket rate-limiting, and automated failover maintaining 99.999% SLA.
+- Spearheaded customer-premise deployments using Kubernetes (k8s/k3s), Podman, and mTLS service mesh.
+
+SKILLS & ARSENAL:
+Languages: Go, Rust, TypeScript, Python, C++, SQL, Bash
+Infrastructure: Kubernetes, Docker, Podman, Helm, Terraform, Envoy, Cilium, eBPF
+Databases: ClickHouse, DuckDB, PostgreSQL, Redis, Apache Kafka, Apache Arrow
+Security: Zero-Trust, mTLS, DISA STIG, NIST 800-53, Air-Gap Diode Egress Lockdown
+`;
+
+const SAMPLE_JOB_SPECS_PALANTIR = `Position: Staff Forward Deployed AI Engineer
+Company: Palantir Technologies
+Department: Commercial & Defense Field Operations
+Location: New York, NY / Washington D.C. / On-site Deployable
+
+Role Mission:
+As a Staff Forward Deployed Engineer at Palantir, you will deploy to the front lines of our highest-impact customer engagements. You will work side-by-side with client engineers and C-level leaders, translating complex business problems into production-grade systems on top of Palantir Foundry and AIP.
+
+Core Requirements & Challenges:
+- 6+ years building and scaling distributed systems in production (Go, Rust, Python, TypeScript, or C++).
+- Proven ability to parse and reconcile "dirty" legacy enterprise data feeds (mainframe extracts, Kafka, CDC, unstructured blobs) into clean analytical pipelines.
+- Deep hands-on experience deploying in hostile or constrained network environments (air-gap, SCIF, zero-egress, DoD IL-5/IL-6, bare-metal Kubernetes).
+- Fluency with modern Enterprise AI/LLM infrastructure: Retrieval-Augmented Generation (RAG), vector databases, model quantization, and strict PII/access governance.
+- Exceptional client diplomacy: you can defend technical tradeoffs against customer Chief Architects and negotiate scope boundaries under tight milestone deadlines.`;
+
+const SAMPLE_JOB_SPECS_DEFENSE = `Position: Forward Deployed Systems Engineer (National Security)
+Company: Anduril Industries / Defense Mission Platforms
+Department: Joint Operations Systems
+Location: Costa Mesa, CA / Washington D.C. / Forward Deployable
+
+Role Mission:
+Deploy mission autonomy and real-time command systems into contested, network-severed defense operational environments. You are responsible for ensuring software operates reliably when communications are jammed and compute is limited to ruggedized edge nodes.
+
+Core Requirements & Challenges:
+- 5+ years of systems programming in Go, C++, or Rust with deep Linux kernel and networking expertise (eBPF, iptables, mTLS).
+- Experience engineering air-gapped container platforms (Kubernetes/k3s/Podman), offline package registries, and unidirectional data diodes.
+- Familiarity with defense compliance standards: DISA STIG, NIST SP 800-53, Zero-Trust Architecture, and secure cryptographic boot.
+- Active Top Secret / SCI clearance preferred or clearable.`;
+
+function initAiResumeGenerator() {
+  const dropzone = document.getElementById("resume-dropzone");
+  const fileInput = document.getElementById("resume-file-input");
+  const browseFilesBtn = document.getElementById("browse-files-btn");
+  const dropzoneIconBtn = document.getElementById("dropzone-icon-btn");
+  const fileBadge = document.getElementById("dropzone-file-badge");
+  const loadedFileName = document.getElementById("loaded-file-name");
+  const clearFileBtn = document.getElementById("clear-uploaded-file-btn");
+  const sampleCvBtn = document.getElementById("use-sample-cv-btn");
+  const generateBtn = document.getElementById("start-ai-generate-btn");
+  const progressContainer = document.getElementById("ai-gen-progress-container");
+  const progressStatusTitle = document.getElementById("ai-progress-status-title");
+  const progressStatusDesc = document.getElementById("ai-progress-status-desc");
+  const progressBarFill = document.getElementById("ai-progress-bar-fill");
+  const outputContainer = document.getElementById("ai-generated-output-container");
+  const senioritySelect = document.getElementById("target-seniority-select");
+  const archetypePills = document.querySelectorAll(".archetype-pill");
+
+  // Job-Specific Elements
+  const jobCompanyInput = document.getElementById("job-target-company");
+  const jobTitleInput = document.getElementById("job-target-title");
+  const jobUrlInput = document.getElementById("job-target-url");
+  const jobSpecsTextarea = document.getElementById("job-target-specs");
+  const startCoverLetterBtn = document.getElementById("start-cover-letter-btn");
+  const loadJobPalantirBtn = document.getElementById("load-sample-job-palantir");
+  const loadJobDefenseBtn = document.getElementById("load-sample-job-defense");
+
+  // In-Place Editor Elements
+  const modeViewBtn = document.getElementById("doc-mode-view-btn");
+  const modeEditBtn = document.getElementById("doc-mode-edit-btn");
+  const docEditorPanel = document.getElementById("doc-editor-panel");
+  const docMarkdownEditor = document.getElementById("doc-markdown-editor");
+  const editorDocLabel = document.getElementById("editor-doc-label");
+  const editorWordCount = document.getElementById("editor-word-count");
+  const editorApplyBtn = document.getElementById("editor-apply-btn");
+  const editorRevertBtn = document.getElementById("editor-revert-btn");
+  const togglePaperThemeBtn = document.getElementById("toggle-paper-theme-btn");
+  
+  if (!dropzone || !generateBtn) return;
+
+  // Archetype radio pill selector
+  archetypePills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      archetypePills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const radio = pill.querySelector("input[type='radio']");
+      if (radio) {
+        radio.checked = true;
+        AiResumeState.archetype = radio.value;
+      }
+    });
+  });
+
+  // Seniority select
+  senioritySelect?.addEventListener("change", (e) => {
+    AiResumeState.targetRoleLevel = e.target.value;
+  });
+
+  // =========================================================================
+  // 1. FILE UPLOAD & LOCAL FILE SELECTION (BULLETPROOF BROWSER SUPPORT)
+  // =========================================================================
+  const triggerFileBrowser = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    fileInput?.click();
+  };
+
+  // Explicit browse button click
+  browseFilesBtn?.addEventListener("click", triggerFileBrowser);
+
+  // Icon click
+  dropzoneIconBtn?.addEventListener("click", triggerFileBrowser);
+
+  // Dropzone card click (ignoring sub-buttons)
+  dropzone.addEventListener("click", (e) => {
+    if (e.target.closest("#clear-uploaded-file-btn") ||
+        e.target.closest("#use-sample-cv-btn") ||
+        e.target.closest("#browse-files-btn") ||
+        e.target.closest("#dropzone-icon-btn")) {
+      return;
+    }
+    triggerFileBrowser(e);
+  });
+
+  // Keyboard accessibility (Enter/Space on dropzone)
+  dropzone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      triggerFileBrowser(e);
+    }
+  });
+
+  // Drag and drop events
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  });
+
+  fileInput?.addEventListener('change', (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  });
+
+  function handleFileUpload(file) {
+    if (!file) return;
+    const name = file.name;
+    const sizeKb = Math.round(file.size / 1024);
+    AiResumeState.fileName = name;
+    AiResumeState.fileType = file.type || name.split('.').pop() || 'unknown';
+    AiResumeState.sampleText = null;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result;
+      if (typeof dataUrl === 'string') {
+        const commaIdx = dataUrl.indexOf(',');
+        AiResumeState.fileBase64 = commaIdx > -1 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+        
+        if (loadedFileName) loadedFileName.textContent = `${name} (${sizeKb} KB)`;
+        if (fileBadge) fileBadge.style.display = 'inline-flex';
+        const titleElem = document.getElementById("dropzone-label-title");
+        const subElem = document.getElementById("dropzone-label-sub");
+        if (titleElem) titleElem.textContent = "File Selected & Ready for Analysis";
+        if (subElem) subElem.textContent = "Click 'Generate CV & Portfolio' or 'Generate Specific Cover Letter'.";
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Clear file
+  clearFileBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    AiResumeState.fileBase64 = null;
+    AiResumeState.fileName = null;
+    AiResumeState.fileType = null;
+    AiResumeState.sampleText = null;
+    if (fileInput) fileInput.value = '';
+    if (fileBadge) fileBadge.style.display = 'none';
+    const titleElem = document.getElementById("dropzone-label-title");
+    const subElem = document.getElementById("dropzone-label-sub");
+    if (titleElem) titleElem.textContent = "Drag & drop your CV (.pdf or .docx) here";
+    if (subElem) subElem.textContent = "or click to browse from your device (Max 15MB)";
+  });
+
+  // Use sample CV
+  sampleCvBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    AiResumeState.sampleText = SAMPLE_ENTERPRISE_CV_TEXT;
+    AiResumeState.fileName = "Enterprise_Staff_FDE_Sample_CV.docx";
+    AiResumeState.fileType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    AiResumeState.fileBase64 = null;
+
+    if (loadedFileName) loadedFileName.textContent = "Enterprise_Staff_FDE_Sample_CV.docx (Sample)";
+    if (fileBadge) fileBadge.style.display = 'inline-flex';
+    const titleElem = document.getElementById("dropzone-label-title");
+    const subElem = document.getElementById("dropzone-label-sub");
+    if (titleElem) titleElem.textContent = "Enterprise Sample CV Loaded";
+    if (subElem) subElem.textContent = "Configured with Staff FDE background, airgap deployments & quantified metrics.";
+  });
+
+  // =========================================================================
+  // 2. JOB-SPECIFIC SPECIFICATIONS & PRESETS
+  // =========================================================================
+  loadJobPalantirBtn?.addEventListener("click", () => {
+    if (jobCompanyInput) jobCompanyInput.value = "Palantir Technologies";
+    if (jobTitleInput) jobTitleInput.value = "Staff Forward Deployed AI Engineer";
+    if (jobUrlInput) jobUrlInput.value = "https://www.palantir.com/careers/fde-mission";
+    if (jobSpecsTextarea) jobSpecsTextarea.value = SAMPLE_JOB_SPECS_PALANTIR;
+  });
+
+  loadJobDefenseBtn?.addEventListener("click", () => {
+    if (jobCompanyInput) jobCompanyInput.value = "Anduril Industries / Defense Mission Platforms";
+    if (jobTitleInput) jobTitleInput.value = "Forward Deployed Systems Engineer (National Security)";
+    if (jobUrlInput) jobUrlInput.value = "https://www.anduril.com/careers/defense-systems";
+    if (jobSpecsTextarea) jobSpecsTextarea.value = SAMPLE_JOB_SPECS_DEFENSE;
+  });
+
+  // =========================================================================
+  // 3. GENERATION ENGINES (CV + PORTFOLIO AND TAILORED COVER LETTER)
+  // =========================================================================
+  generateBtn.addEventListener("click", async () => {
+    // If no file loaded, automatically use sample CV
+    if (!AiResumeState.fileBase64 && !AiResumeState.sampleText) {
+      sampleCvBtn?.click();
+    }
+
+    generateBtn.disabled = true;
+    if (progressContainer) progressContainer.style.display = 'flex';
+    if (outputContainer) outputContainer.style.display = 'none';
+
+    let progress = 15;
+    if (progressBarFill) progressBarFill.style.width = `${progress}%`;
+    if (progressStatusTitle) progressStatusTitle.textContent = "Scanning CV & Extracting Architecture Competencies...";
+    if (progressStatusDesc) progressStatusDesc.textContent = "Mapping candidate experience against Forward Deployed Engineering hiring benchmarks.";
+
+    const progressInterval = setInterval(() => {
+      progress += Math.floor(Math.random() * 15) + 10;
+      if (progress > 88) {
+        progress = 88;
+        clearInterval(progressInterval);
+      }
+      if (progressBarFill) progressBarFill.style.width = `${progress}%`;
+
+      if (progress > 30 && progress <= 55) {
+        if (progressStatusTitle) progressStatusTitle.textContent = "Synthesizing 2–3 Page Tailored FDE Resume...";
+        if (progressStatusDesc) progressStatusDesc.textContent = "Injecting Vanguard STAR action verbs, ARR expansion attributions, and airgap security keywords.";
+      } else if (progress > 55) {
+        if (progressStatusTitle) progressStatusTitle.textContent = "Architecting 5–8 Page Technical Portfolio Dossier...";
+        if (progressStatusDesc) progressStatusDesc.textContent = "Drafting 4 flagship system architecture case studies with sequence flows, failure retrospectives, and customer diplomacy playbooks.";
+      }
+    }, 450);
+
+    try {
+      const response = await fetch('/api/resume/analyze-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileBase64: AiResumeState.fileBase64,
+          fileName: AiResumeState.fileName,
+          fileType: AiResumeState.fileType,
+          archetype: AiResumeState.archetype,
+          targetRoleLevel: AiResumeState.targetRoleLevel,
+          sampleText: AiResumeState.sampleText
+        })
+      });
+
+      const data = await response.json();
+      clearInterval(progressInterval);
+
+      if (progressBarFill) progressBarFill.style.width = "100%";
+      if (progressStatusTitle) progressStatusTitle.textContent = "Documents Synthesized Successfully!";
+      if (progressStatusDesc) progressStatusDesc.textContent = "Rendering interactive multi-page layouts and print styles...";
+
+      setTimeout(() => {
+        if (progressContainer) progressContainer.style.display = 'none';
+        generateBtn.disabled = false;
+
+        if (data && data.success) {
+          AiResumeState.generatedResult = data;
+          AiResumeState.editedResumeMarkdown = data.resumeMarkdown;
+          AiResumeState.editedPortfolioMarkdown = data.portfolioMarkdown;
+          renderGeneratedOutputs(data);
+          if (outputContainer) {
+            outputContainer.style.display = 'block';
+            outputContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 500);
+
+    } catch (err) {
+      clearInterval(progressInterval);
+      generateBtn.disabled = false;
+      if (progressContainer) progressContainer.style.display = 'none';
+      console.error("[Generation Failed]:", err);
+    }
+  });
+
+  // Job-Specific Cover Letter Generator Button
+  startCoverLetterBtn?.addEventListener("click", async () => {
+    if (!AiResumeState.fileBase64 && !AiResumeState.sampleText) {
+      sampleCvBtn?.click();
+    }
+
+    const company = jobCompanyInput?.value?.trim() || "Palantir Technologies";
+    const title = jobTitleInput?.value?.trim() || "Staff Forward Deployed AI Engineer";
+    const specs = jobSpecsTextarea?.value?.trim() || SAMPLE_JOB_SPECS_PALANTIR;
+    const url = jobUrlInput?.value?.trim() || "";
+
+    const origBtnHtml = startCoverLetterBtn.innerHTML;
+    startCoverLetterBtn.disabled = true;
+    startCoverLetterBtn.innerHTML = `
+      <svg class="progress-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 0.8s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+      Analyzing Specs & Synthesizing Letter...
+    `;
+
+    try {
+      const response = await fetch('/api/resume/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateName: AiResumeState.generatedResult?.candidateName || "Alex Morgan",
+          candidateCvText: AiResumeState.sampleText || AiResumeState.generatedResult?.resumeMarkdown || SAMPLE_ENTERPRISE_CV_TEXT,
+          jobTitle: title,
+          companyName: company,
+          jobSpecs: specs,
+          jobUrl: url,
+          archetype: AiResumeState.archetype
+        })
+      });
+
+      const data = await response.json();
+      startCoverLetterBtn.disabled = false;
+      startCoverLetterBtn.innerHTML = origBtnHtml;
+
+      if (data && data.success) {
+        AiResumeState.coverLetterResult = data;
+        AiResumeState.editedCoverLetterMarkdown = data.coverLetterMarkdown;
+        renderCoverLetterOutput(data);
+
+        // Switch to cover letter tab
+        const coverLetterTabBtn = document.querySelector(`.doc-tab-btn[data-doc-view="coverletter"]`);
+        coverLetterTabBtn?.click();
+
+        if (outputContainer) {
+          outputContainer.style.display = 'block';
+          outputContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    } catch (err) {
+      startCoverLetterBtn.disabled = false;
+      startCoverLetterBtn.innerHTML = origBtnHtml;
+      console.error("[Cover Letter Generation Error]:", err);
+    }
+  });
+
+  // =========================================================================
+  // 4. DOCUMENT TABS & VIEW/EDIT MODES
+  // =========================================================================
+  const docTabBtns = document.querySelectorAll(".doc-tab-btn");
+  docTabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.docView;
+      docTabBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      AiResumeState.activeDocView = view;
+
+      const resumePanel = document.getElementById("doc-panel-resume");
+      const portfolioPanel = document.getElementById("doc-panel-portfolio");
+      const coverLetterPanel = document.getElementById("doc-panel-coverletter");
+      const analysisPanel = document.getElementById("doc-panel-analysis");
+
+      if (resumePanel) {
+        resumePanel.style.display = view === "resume" ? "block" : "none";
+        resumePanel.classList.toggle("active", view === "resume");
+      }
+      if (portfolioPanel) {
+        portfolioPanel.style.display = view === "portfolio" ? "block" : "none";
+        portfolioPanel.classList.toggle("active", view === "portfolio");
+      }
+      if (coverLetterPanel) {
+        coverLetterPanel.style.display = view === "coverletter" ? "block" : "none";
+        coverLetterPanel.classList.toggle("active", view === "coverletter");
+      }
+      if (analysisPanel) {
+        analysisPanel.style.display = view === "analysis" ? "block" : "none";
+        analysisPanel.classList.toggle("active", view === "analysis");
+      }
+
+      // Sync active document into Markdown editor if edit mode is active
+      syncEditorWithActiveDoc();
+    });
+  });
+
+  function getActiveDocContent() {
+    const view = AiResumeState.activeDocView;
+    if (view === 'resume') {
+      return AiResumeState.editedResumeMarkdown || AiResumeState.generatedResult?.resumeMarkdown || '';
+    } else if (view === 'portfolio') {
+      return AiResumeState.editedPortfolioMarkdown || AiResumeState.generatedResult?.portfolioMarkdown || '';
+    } else if (view === 'coverletter') {
+      return AiResumeState.editedCoverLetterMarkdown || AiResumeState.coverLetterResult?.coverLetterMarkdown || '';
+    }
+    return '';
+  }
+
+  function getActiveDocName() {
+    const view = AiResumeState.activeDocView;
+    if (view === 'resume') return 'Tailored FDE Resume';
+    if (view === 'portfolio') return 'Technical Engineering Portfolio';
+    if (view === 'coverletter') return 'Job-Specific Technical Cover Letter';
+    return 'Architectural Analysis';
+  }
+
+  function updateEditorStats(text) {
+    if (!editorWordCount) return;
+    const words = (text || '').trim().split(/\s+/).filter(Boolean).length;
+    const chars = (text || '').length;
+    editorWordCount.textContent = `${words.toLocaleString()} words | ${chars.toLocaleString()} chars`;
+  }
+
+  function syncEditorWithActiveDoc() {
+    if (!AiResumeState.docEditMode) return;
+    const view = AiResumeState.activeDocView;
+    if (view === 'analysis') {
+      if (docEditorPanel) docEditorPanel.style.display = 'none';
+      return;
+    }
+    if (docEditorPanel) docEditorPanel.style.display = 'block';
+    if (editorDocLabel) editorDocLabel.textContent = `Editing: ${getActiveDocName()}`;
+    const content = getActiveDocContent();
+    if (docMarkdownEditor) {
+      docMarkdownEditor.value = content;
+      updateEditorStats(content);
+    }
+  }
+
+  // Toggle View Mode vs Edit Mode
+  modeViewBtn?.addEventListener("click", () => {
+    AiResumeState.docEditMode = false;
+    modeViewBtn.classList.add("active-mode");
+    modeEditBtn.classList.remove("active-mode");
+    if (docEditorPanel) docEditorPanel.style.display = 'none';
+  });
+
+  modeEditBtn?.addEventListener("click", () => {
+    AiResumeState.docEditMode = true;
+    modeEditBtn.classList.add("active-mode");
+    modeViewBtn.classList.remove("active-mode");
+    syncEditorWithActiveDoc();
+    docMarkdownEditor?.focus();
+  });
+
+  docMarkdownEditor?.addEventListener("input", (e) => {
+    updateEditorStats(e.target.value);
+  });
+
+  // Apply Changes from Editor
+  editorApplyBtn?.addEventListener("click", () => {
+    if (!docMarkdownEditor) return;
+    const updatedText = docMarkdownEditor.value;
+    const view = AiResumeState.activeDocView;
+
+    if (view === 'resume') {
+      AiResumeState.editedResumeMarkdown = updatedText;
+      const resumePaper = document.getElementById("rendered-resume-paper");
+      if (resumePaper) resumePaper.innerHTML = parseMarkdownToHtml(updatedText);
+    } else if (view === 'portfolio') {
+      AiResumeState.editedPortfolioMarkdown = updatedText;
+      const portfolioPaper = document.getElementById("rendered-portfolio-paper");
+      if (portfolioPaper) portfolioPaper.innerHTML = parseMarkdownToHtml(updatedText);
+    } else if (view === 'coverletter') {
+      AiResumeState.editedCoverLetterMarkdown = updatedText;
+      const coverLetterPaper = document.getElementById("rendered-coverletter-paper");
+      if (coverLetterPaper) coverLetterPaper.innerHTML = parseMarkdownToHtml(updatedText);
+    }
+
+    // Flash confirmation
+    const origHtml = editorApplyBtn.innerHTML;
+    editorApplyBtn.innerHTML = `✓ Saved & Updated`;
+    setTimeout(() => { editorApplyBtn.innerHTML = origHtml; }, 1800);
+  });
+
+  // Revert Changes in Editor
+  editorRevertBtn?.addEventListener("click", () => {
+    const view = AiResumeState.activeDocView;
+    let orig = '';
+    if (view === 'resume') {
+      orig = AiResumeState.generatedResult?.resumeMarkdown || '';
+      AiResumeState.editedResumeMarkdown = orig;
+      const resumePaper = document.getElementById("rendered-resume-paper");
+      if (resumePaper) resumePaper.innerHTML = parseMarkdownToHtml(orig);
+    } else if (view === 'portfolio') {
+      orig = AiResumeState.generatedResult?.portfolioMarkdown || '';
+      AiResumeState.editedPortfolioMarkdown = orig;
+      const portfolioPaper = document.getElementById("rendered-portfolio-paper");
+      if (portfolioPaper) portfolioPaper.innerHTML = parseMarkdownToHtml(orig);
+    } else if (view === 'coverletter') {
+      orig = AiResumeState.coverLetterResult?.coverLetterMarkdown || '';
+      AiResumeState.editedCoverLetterMarkdown = orig;
+      const coverLetterPaper = document.getElementById("rendered-coverletter-paper");
+      if (coverLetterPaper) coverLetterPaper.innerHTML = parseMarkdownToHtml(orig);
+    }
+
+    if (docMarkdownEditor) {
+      docMarkdownEditor.value = orig;
+      updateEditorStats(orig);
+    }
+  });
+
+  // Toggle White Print Theme Preview
+  togglePaperThemeBtn?.addEventListener("click", () => {
+    AiResumeState.whitePrintTheme = !AiResumeState.whitePrintTheme;
+    const papers = document.querySelectorAll(".paper-sheet");
+    papers.forEach(p => p.classList.toggle("white-print-theme", AiResumeState.whitePrintTheme));
+
+    if (AiResumeState.whitePrintTheme) {
+      togglePaperThemeBtn.textContent = "🌙 Dark Screen Theme";
+      togglePaperThemeBtn.style.color = "var(--accent-amber)";
+    } else {
+      togglePaperThemeBtn.textContent = "📄 White Print Theme";
+      togglePaperThemeBtn.style.color = "";
+    }
+  });
+
+  // =========================================================================
+  // 5. EXPORT ACTIONS (PRINT TO PDF, MARKDOWN DOWNLOAD, COPY)
+  // =========================================================================
+  document.getElementById("btn-print-pdf")?.addEventListener("click", () => {
+    // Standard PDF print execution
+    window.print();
+  });
+
+  document.getElementById("btn-download-md")?.addEventListener("click", () => {
+    const view = AiResumeState.activeDocView;
+    const content = getActiveDocContent();
+    if (!content) return;
+
+    const candidateName = (AiResumeState.generatedResult?.candidateName || "Candidate").replace(/\s+/g, '_');
+    let filename = `FDE_Document_${candidateName}.md`;
+
+    if (view === 'resume') {
+      filename = `FDE_Resume_${candidateName}.md`;
+    } else if (view === 'portfolio') {
+      filename = `FDE_Technical_Portfolio_${candidateName}.md`;
+    } else if (view === 'coverletter') {
+      const company = (jobCompanyInput?.value?.trim() || "Enterprise").replace(/\s+/g, '_');
+      filename = `FDE_Cover_Letter_${company}_${candidateName}.md`;
+    }
+
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("btn-copy-doc")?.addEventListener("click", () => {
+    const content = getActiveDocContent();
+    if (!content) return;
+
+    navigator.clipboard.writeText(content).then(() => {
+      const btn = document.getElementById("btn-copy-doc");
+      if (btn) {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = `✓ Copied!`;
+        setTimeout(() => { btn.innerHTML = origHtml; }, 2000);
+      }
+    });
+  });
+}
+
+function renderGeneratedOutputs(data) {
+  const scoreElem = document.getElementById("output-alignment-score");
+  const headerElem = document.getElementById("output-candidate-header");
+  const verdictElem = document.getElementById("output-verdict-text");
+  const resumeBadge = document.getElementById("badge-resume-pages");
+  const portfolioBadge = document.getElementById("badge-portfolio-pages");
+
+  if (scoreElem) scoreElem.textContent = data.analysisSummary?.score || 96;
+  if (headerElem) headerElem.textContent = `Synthesized FDE Dossier for ${data.candidateName || 'Candidate'}`;
+  if (verdictElem) verdictElem.textContent = data.analysisSummary?.executiveVerdict || "High-impact alignment with FDE hiring standards.";
+  if (resumeBadge) resumeBadge.textContent = `${data.pageCounts?.resumePages || '2–3'} Pages`;
+  if (portfolioBadge) portfolioBadge.textContent = `${data.pageCounts?.portfolioPages || '5–8'} Pages`;
+
+  // Render Resume Paper
+  const resumePaper = document.getElementById("rendered-resume-paper");
+  if (resumePaper) {
+    resumePaper.innerHTML = parseMarkdownToHtml(data.resumeMarkdown);
+  }
+
+  // Render Portfolio Paper
+  const portfolioPaper = document.getElementById("rendered-portfolio-paper");
+  if (portfolioPaper) {
+    portfolioPaper.innerHTML = parseMarkdownToHtml(data.portfolioMarkdown);
+  }
+
+  // Render Analysis Grid
+  renderAnalysisGrid(data);
+}
+
+function renderCoverLetterOutput(data) {
+  const coverLetterPaper = document.getElementById("rendered-coverletter-paper");
+  if (coverLetterPaper) {
+    coverLetterPaper.innerHTML = parseMarkdownToHtml(data.coverLetterMarkdown);
+  }
+
+  const badge = document.getElementById("badge-coverletter-pages");
+  if (badge) badge.textContent = `1 Page (Standard Letterhead)`;
+
+  // Update alignment score circle if higher
+  const scoreElem = document.getElementById("output-alignment-score");
+  if (scoreElem && data.matchScore) {
+    scoreElem.textContent = data.matchScore;
+  }
+}
+
+function renderAnalysisGrid(data) {
+  const analysisGrid = document.getElementById("rendered-analysis-content");
+  if (!analysisGrid) return;
+  const summary = data.analysisSummary || {};
+
+  analysisGrid.innerHTML = `
+    <div class="bento-col-6">
+      <div class="analysis-card-box">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+          <span style="color: var(--accent-emerald)">✓</span> Key Architectural Strengths Identified
+        </div>
+        <ul style="padding-left: 1.25rem; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; display: flex; flex-direction: column; gap: 0.4rem;">
+          ${(summary.strengths || []).map(s => `<li>${s}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="analysis-card-box" style="margin-top: 1rem;">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+          <span style="color: var(--accent-amber)">⚡</span> Gaps Remediated by FDE Engine
+        </div>
+        <ul style="padding-left: 1.25rem; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; display: flex; flex-direction: column; gap: 0.4rem;">
+          ${(summary.gapsIdentified || []).map(g => `<li>${g}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+
+    <div class="bento-col-6">
+      <div class="analysis-card-box">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+          <span style="color: var(--accent-cyan)">🎯</span> Keywords Injected for Recruiter & ATS Dominance
+        </div>
+        <div style="margin-top: 0.5rem;">
+          ${(summary.keywordsAdded || []).map(k => `<span class="keyword-tag-pill">${k}</span>`).join('')}
+        </div>
+      </div>
+
+      <div class="analysis-card-box" style="margin-top: 1rem; border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.05);">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 0.35rem;">Field Director Recommendation</div>
+        <p style="font-size: 0.84rem; color: var(--text-main); line-height: 1.5;">
+          "This dossier pair strikes the rare balance of <strong>deep low-level engineering capability</strong> (eBPF, ring buffers, mTLS) and <strong>C-suite diplomatic maturity</strong>. Use the 3-page resume for initial recruiter screens, attach the tailored cover letter to your targeted application, and bring the 8-page portfolio to technical architecture and onsite interviews."
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Fast client-side markdown to HTML parser supporting tables, code blocks, and page breaks
+ */
+function parseMarkdownToHtml(markdown) {
+  if (!markdown) return '';
+
+  let html = markdown
+    .replace(/\r\n/g, '\n')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Page break indicators
+  html = html.replace(/&lt;!--\s*PAGE BREAK:\s*(PAGE\s*\d+)?\s*--&gt;/gi, (_, pageNum) => {
+    return `<div class="page-break-indicator"><span>PAGE BREAK // ${pageNum || 'NEXT PAGE'}</span></div>`;
+  });
+  html = html.replace(/^---$/gm, '<div class="page-break-indicator"><span>PAGE BREAK</span></div>');
+
+  // Code blocks (multiline)
+  html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+  });
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Headings
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+
+  // Bold and Italics
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // Tables
+  html = html.replace(/(?:^\|.*\|\n?)+/gm, (tableMatch) => {
+    const rows = tableMatch.trim().split('\n');
+    if (rows.length < 2) return tableMatch;
+
+    let tableHtml = '<table>';
+    let isHeader = true;
+
+    rows.forEach(row => {
+      if (/^\|[\s:-]+\|/.test(row)) {
+        isHeader = false;
+        return;
+      }
+
+      const cells = row.split('|').slice(1, -1).map(c => c.trim());
+      tableHtml += '<tr>';
+      cells.forEach(cell => {
+        tableHtml += isHeader ? `<th>${cell}</th>` : `<td>${cell}</td>`;
+      });
+      tableHtml += '</tr>';
+    });
+
+    tableHtml += '</table>';
+    return tableHtml;
+  });
+
+  // Bullet list items
+  html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+  // Paragraphs
+  const blocks = html.split('\n\n');
+  const processedBlocks = blocks.map(b => {
+    const trimmed = b.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('<h') || trimmed.startsWith('<table') || trimmed.startsWith('<pre') || trimmed.startsWith('<div') || trimmed.startsWith('<ul') || trimmed.startsWith('<li')) {
+      return trimmed;
+    }
+    return `<p>${trimmed.replace(/\n/g, '<br/>')}</p>`;
+  });
+
+  return processedBlocks.join('\n');
+}

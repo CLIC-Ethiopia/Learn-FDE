@@ -1,6 +1,6 @@
 {
-  "summary":  "Comprehensive architectural implementation plan to add the new 'FDE Careers & Overview' primary tab, complete with an interactive Day-in-the-Life hourly simulator, FDE Career Archetype assessment quiz, multi-role comparison matrix, and career progression ladder & compensation explorer. Cleans up tab numbering across all 5 navigation tabs.",
-  "updatedAt":  "2026-10-26T15:04:38.688756755Z",
+  "summary":  "Implementation plan for the AI Resume & Portfolio Generator within the Job Hunting tab. The user will be able to upload a DOCX or PDF CV, select an FDE target specialization (Enterprise AI, Defense/Air-Gapped, or Generalist), and receive two comprehensive AI-synthesized documents: a 2-3 page tailored FDE Resume and a 5-8 page Technical Portfolio with STAR architecture case studies, complete with styled print-to-PDF views and markdown export.",
+  "updatedAt":  "2026-10-27T10:19:47.749228509Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

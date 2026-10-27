@@ -749,6 +749,277 @@
 
           <!-- View 3C: Resume Optimization -->
           <div id="job-view-resume" class="job-subview" style="display: none;">
+
+            <!-- AI Resume & Technical Portfolio Generator (Dual Multi-Page Artifacts) -->
+            <div class="bento-card bento-card-highlight ai-generator-card" style="margin-bottom: 1.5rem;">
+              <div class="card-header-flex" style="align-items: flex-start;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span class="tag-badge" style="color: var(--accent-cyan); background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.3);">AI Document Intelligence</span>
+                    <span class="tag-badge" style="color: var(--accent-emerald); background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3);">Dual Document Output: CV (2-3 Pages) + Portfolio (5-8 Pages)</span>
+                  </div>
+                  <div class="card-title" style="font-size: 1.25rem;">AI Forward Deployed Resume & Technical Portfolio Generator</div>
+                  <div class="card-subtitle" style="font-size: 0.88rem; max-width: 820px; margin-top: 0.3rem;">
+                    Upload your raw CV or resume (PDF or DOCX). Our AI analyzes your background, maps it to real forward-deployed engineering architectures, and synthesizes two publication-grade artifacts: an optimized <strong>2–3 page FDE Resume</strong> with quantified business impact and an in-depth <strong>5–8 page Technical Portfolio</strong> with STAR system architecture case studies.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Setup & Upload Controls -->
+              <div class="ai-gen-config-grid" style="margin-top: 1.25rem;">
+                <!-- Left: Upload Zone -->
+                <div class="upload-dropzone" id="resume-dropzone" tabindex="0" role="button" aria-label="Upload CV or Resume file" title="Click or drag file here to select">
+                  <input type="file" id="resume-file-input" accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; opacity: 0;" />
+                  <div class="dropzone-content">
+                    <div class="dropzone-icon" id="dropzone-icon-btn" title="Click to browse files">
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <div class="dropzone-title" id="dropzone-label-title">Drag & drop your CV (.pdf or .docx) here</div>
+                    <div class="dropzone-subtitle" id="dropzone-label-sub">or click to browse from your device (Max 15MB)</div>
+                    
+                    <div style="margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                      <button type="button" id="browse-files-btn" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; pointer-events: auto;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        Browse Local File
+                      </button>
+                      <button type="button" id="use-sample-cv-btn" class="btn btn-ghost btn-sm" style="font-size: 0.78rem; pointer-events: auto;">
+                        ⚡ Load Sample Enterprise CV
+                      </button>
+                    </div>
+
+                    <div id="dropzone-file-badge" class="file-loaded-badge" style="display: none; margin-top: 0.75rem;">
+                      <span id="loaded-file-name">filename.pdf</span>
+                      <button type="button" id="clear-uploaded-file-btn" class="btn-clear-file" title="Remove file">&times;</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Configuration Options -->
+                <div class="ai-gen-options-panel">
+                  <div class="option-group">
+                    <label class="option-label">Target FDE Specialization Archetype</label>
+                    <div class="archetype-selector-pills">
+                      <label class="archetype-pill active">
+                        <input type="radio" name="target-archetype" value="enterprise_ai" checked />
+                        <span class="pill-title">🤖 Enterprise AI & Data</span>
+                        <span class="pill-desc">LLMs, RAG, Snowflake, Databricks, sub-second vector search</span>
+                      </label>
+                      <label class="archetype-pill">
+                        <input type="radio" name="target-archetype" value="defense_airgap" />
+                        <span class="pill-title">🛡️ Defense & Air-Gapped</span>
+                        <span class="pill-desc">SCIF, zero external egress, mTLS mesh, ruggedized edge</span>
+                      </label>
+                      <label class="archetype-pill">
+                        <input type="radio" name="target-archetype" value="generalist" />
+                        <span class="pill-title">⚡ Generalist FDE</span>
+                        <span class="pill-desc">Rapid prototyping, client diplomacy, distributed microservices</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 220px;">
+                      <label class="option-label">Target Seniority Level</label>
+                      <select id="target-seniority-select" class="form-select" style="width: 100%;">
+                        <option value="Staff Forward Deployed Engineer">Staff Forward Deployed Engineer ($280k–$360k)</option>
+                        <option value="Lead Forward Deployed Engineer">Lead Forward Deployed Engineer ($240k–$310k)</option>
+                        <option value="Senior Forward Deployed Engineer">Senior Forward Deployed Engineer ($190k–$250k)</option>
+                        <option value="Principal Solutions Architect">Principal Solutions Architect / Field Director</option>
+                      </select>
+                    </div>
+                    <button id="start-ai-generate-btn" class="btn btn-primary" style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      Generate CV & Portfolio
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dedicated Section: Job-Specific Targeting & Cover Letter Generator -->
+              <div class="job-tailor-section" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);">
+                <div class="card-header-flex" style="margin-bottom: 0.75rem;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+                      <span class="tag-badge" style="color: var(--accent-indigo); background: rgba(99, 102, 241, 0.12); border-color: rgba(99, 102, 241, 0.3);">Targeted Application Engine</span>
+                      <span class="tag-badge" style="color: var(--accent-cyan); background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.3);">Job-Specific Matching</span>
+                    </div>
+                    <h3 style="font-size: 1.08rem; font-weight: 700; color: #fff;">Job-Specific Tailoring & Technical Cover Letter</h3>
+                    <div style="font-size: 0.82rem; color: var(--text-muted);">
+                      Provide a job posting link or copy/paste job requirements. The AI analyzes the candidate's CV against the job description and generates a tailored, high-impact technical cover letter matching international tech standards.
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    <button type="button" id="load-sample-job-palantir" class="btn btn-ghost btn-sm" style="font-size: 0.75rem;">
+                      ⚡ Palantir FDE Specs
+                    </button>
+                    <button type="button" id="load-sample-job-defense" class="btn btn-ghost btn-sm" style="font-size: 0.75rem;">
+                      ⚡ Defense Mission Specs
+                    </button>
+                  </div>
+                </div>
+
+                <div class="job-spec-inputs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 0.75rem;">
+                  <div>
+                    <label class="option-label" for="job-target-company">Company Name</label>
+                    <input type="text" id="job-target-company" class="form-input" placeholder="e.g. Palantir Technologies, Anduril, Databricks" value="Palantir Technologies" />
+                  </div>
+                  <div>
+                    <label class="option-label" for="job-target-title">Target Role Title</label>
+                    <input type="text" id="job-target-title" class="form-input" placeholder="e.g. Staff Forward Deployed AI Engineer" value="Staff Forward Deployed AI Engineer" />
+                  </div>
+                  <div style="grid-column: 1 / -1;">
+                    <label class="option-label" for="job-target-url">Job Posting Link (URL - Optional)</label>
+                    <input type="url" id="job-target-url" class="form-input" placeholder="e.g. https://jobs.lever.co/palantir/fde-lead-mission" />
+                  </div>
+                  <div style="grid-column: 1 / -1;">
+                    <label class="option-label" for="job-target-specs">Job Description, Requirements & Technical Challenges (Paste Below)</label>
+                    <textarea id="job-target-specs" class="form-textarea" rows="4" placeholder="Paste the job posting description, key technical qualifications, infrastructure constraints (e.g. air-gap, low-latency, dirty data), and responsibilities..."></textarea>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    💡 Cover letter follows international engineering standards (formal letterhead, 3 technical proof points with STAR metrics, executive closing).
+                  </div>
+                  <button type="button" id="start-cover-letter-btn" class="btn btn-indigo" style="padding: 0.5rem 1.4rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Generate Specific Cover Letter
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loading & Progress Stepper -->
+              <div id="ai-gen-progress-container" class="ai-gen-progress-panel" style="display: none;">
+                <div class="progress-spinner-ring"></div>
+                <div style="flex: 1;">
+                  <div class="progress-step-title" id="ai-progress-status-title">Parsing CV Structure & Identifying Architecture Archetype...</div>
+                  <div class="progress-step-subtitle" id="ai-progress-status-desc">Analyzing technical competencies, system architecture footprints, and client impact formulas.</div>
+                  <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="ai-progress-bar-fill" style="width: 25%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Generated Output Container (Hidden until generated) -->
+              <div id="ai-generated-output-container" class="ai-output-workspace" style="display: none;">
+                <!-- Header / Verdict Bar -->
+                <div class="output-verdict-bar">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="score-circle" id="output-alignment-score">96</div>
+                    <div>
+                      <div style="font-weight: 700; color: #fff; font-size: 1rem;" id="output-candidate-header">Synthesized FDE Dossier for Candidate</div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);" id="output-verdict-text">High-impact alignment with Forward Deployed Engineering hiring bar.</div>
+                    </div>
+                  </div>
+                  <div class="output-actions-cluster">
+                    <!-- Standard Tech PDF Print Button -->
+                    <button id="btn-print-pdf" class="btn btn-emerald btn-sm" title="Print or save as international standard PDF">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                      Print / Save Standard PDF
+                    </button>
+                    <!-- Markdown Download -->
+                    <button id="btn-download-md" class="btn btn-secondary btn-sm" title="Download raw markdown document">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Download Markdown (.md)
+                    </button>
+                    <!-- Copy to Clipboard -->
+                    <button id="btn-copy-doc" class="btn btn-ghost btn-sm" title="Copy markdown to clipboard">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Document Selection Tabs & Edit/View Mode Controls -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+                  <div class="doc-view-tabs" style="margin-bottom: 0;">
+                    <button class="doc-tab-btn active" data-doc-view="resume">
+                      📄 Tailored FDE Resume <span class="doc-badge" id="badge-resume-pages">2–3 Pages</span>
+                    </button>
+                    <button class="doc-tab-btn" data-doc-view="portfolio">
+                      📑 Technical Engineering Portfolio <span class="doc-badge" id="badge-portfolio-pages">5–8 Pages</span>
+                    </button>
+                    <button class="doc-tab-btn" data-doc-view="coverletter">
+                      ✉️ Job-Specific Cover Letter <span class="doc-badge" id="badge-coverletter-pages">1 Page</span>
+                    </button>
+                    <button class="doc-tab-btn" data-doc-view="analysis">
+                      📊 Gap & Match Audit
+                    </button>
+                  </div>
+
+                  <!-- Toolbar: Edit Mode Toggle & Print Appearance Toggle -->
+                  <div class="doc-mode-toolbar" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="btn-group" style="display: inline-flex; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); overflow: hidden;">
+                      <button type="button" id="doc-mode-view-btn" class="btn btn-secondary btn-sm active-mode" style="border-radius: 0; padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                        👁️ Standard View
+                      </button>
+                      <button type="button" id="doc-mode-edit-btn" class="btn btn-secondary btn-sm" style="border-radius: 0; padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                        ✏️ Edit Document
+                      </button>
+                    </div>
+
+                    <button type="button" id="toggle-paper-theme-btn" class="btn btn-ghost btn-sm" title="Toggle between Dark Screen Paper and Pure White Print Paper preview" style="font-size: 0.78rem;">
+                      📄 White Print Theme
+                    </button>
+                  </div>
+                </div>
+
+                <!-- In-Place Document Editor Container (Shown when Edit Document mode is active) -->
+                <div id="doc-editor-panel" class="doc-editor-panel" style="display: none; margin-bottom: 1.25rem;">
+                  <div class="editor-header-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-medium); border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span id="editor-doc-label" style="font-weight: 700; font-size: 0.85rem; color: var(--accent-cyan);">Editing: Tailored FDE Resume</span>
+                      <span id="editor-word-count" style="font-size: 0.75rem; color: var(--text-subtle);">0 words | 0 chars</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                      <button type="button" id="editor-revert-btn" class="btn btn-ghost btn-sm" style="font-size: 0.75rem;">
+                        ↺ Reset to Original
+                      </button>
+                      <button type="button" id="editor-apply-btn" class="btn btn-emerald btn-sm" style="font-size: 0.75rem; font-weight: 700;">
+                        💾 Save & Update View
+                      </button>
+                    </div>
+                  </div>
+                  <textarea id="doc-markdown-editor" class="doc-markdown-editor" spellcheck="false" placeholder="Edit markdown text here..."></textarea>
+                  <div style="font-size: 0.75rem; color: var(--text-subtle); padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); display: flex; justify-content: space-between;">
+                    <span>Supports standard Markdown: <code># H1</code>, <code>## H2</code>, <code>**bold**</code>, <code>- bullet</code>, <code>| table |</code>, and <code>&lt;!-- PAGE BREAK: PAGE 2 --&gt;</code></span>
+                    <span style="color: var(--accent-emerald);">Edits immediately apply to PDF & Markdown exports</span>
+                  </div>
+                </div>
+
+                <!-- Document Presentation Frame -->
+                <div class="doc-display-viewport">
+                  <!-- View 1: Resume View -->
+                  <div id="doc-panel-resume" class="doc-panel active">
+                    <div class="paper-sheet" id="rendered-resume-paper">
+                      <!-- Rendered Resume Content -->
+                    </div>
+                  </div>
+
+                  <!-- View 2: Portfolio View -->
+                  <div id="doc-panel-portfolio" class="doc-panel" style="display: none;">
+                    <div class="paper-sheet paper-portfolio" id="rendered-portfolio-paper">
+                      <!-- Rendered Portfolio Content -->
+                    </div>
+                  </div>
+
+                  <!-- View 3: Cover Letter View -->
+                  <div id="doc-panel-coverletter" class="doc-panel" style="display: none;">
+                    <div class="paper-sheet paper-coverletter" id="rendered-coverletter-paper">
+                      <!-- Rendered Cover Letter Content -->
+                    </div>
+                  </div>
+
+                  <!-- View 4: Analysis & Matching View -->
+                  <div id="doc-panel-analysis" class="doc-panel" style="display: none;">
+                    <div class="bento-grid" id="rendered-analysis-content">
+                      <!-- Rendered Analysis Content -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="bento-grid">
               <!-- Resume Impact Auditor -->
               <div class="bento-col-6">

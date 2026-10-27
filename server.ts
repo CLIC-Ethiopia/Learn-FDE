@@ -3,6 +3,8 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { analyzeAndGenerateDocuments, generateCoverLetter } from './src/resume-generator';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,6 +117,63 @@ async function startServer() {
       uptime: process.uptime()
     });
   });
+
+  // API 5: AI Resume & Technical Portfolio Generator
+  app.post('/api/resume/analyze-generate', async (req: Request, res: Response) => {
+    try {
+      const { fileBase64, fileName, fileType, archetype, targetRoleLevel, sampleText } = req.body || {};
+      const result = await analyzeAndGenerateDocuments({
+        fileBase64,
+        fileName,
+        fileType,
+        archetype,
+        targetRoleLevel,
+        sampleText
+      });
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Resume Generation Error]:', err);
+      res.status(500).json({
+        success: false,
+        error: err.message || 'Failed to analyze and generate FDE documents'
+      });
+    }
+  });
+
+  // API 6: AI Job-Specific Cover Letter Generator
+  app.post('/api/resume/generate-cover-letter', async (req: Request, res: Response) => {
+    try {
+      const {
+        candidateName,
+        candidateCvText,
+        jobTitle,
+        companyName,
+        jobSpecs,
+        jobUrl,
+        tone,
+        archetype
+      } = req.body || {};
+
+      const result = await generateCoverLetter({
+        candidateName,
+        candidateCvText,
+        jobTitle,
+        companyName,
+        jobSpecs,
+        jobUrl,
+        tone,
+        archetype
+      });
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Cover Letter Generation Error]:', err);
+      res.status(500).json({
+        success: false,
+        error: err.message || 'Failed to generate tailored cover letter'
+      });
+    }
+  });
+
 
   // Setup Vite dev server middleware or serve dist
   if (process.env.NODE_ENV === 'production') {
